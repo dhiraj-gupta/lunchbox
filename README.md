@@ -6,4 +6,6 @@ __This application is still in heavy active and early development.__
 
 
 ## Early demo video
-<iframe width="420" height="315" src="https://www.youtube.com/embed/Due08SU5cb4" frameborder="0" allowfullscreen></iframe>
+[![Demo Video](http://img.youtube.com/vi/Due08SU5cb4/0.jpg)](https://www.youtube.com/watch?v=Due08SU5cb4)
+
+
