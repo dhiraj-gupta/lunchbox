@@ -22,7 +22,7 @@ Steps:
 1. `git clone https://github.com/nateswart/lunchbox.git`
 2. `cd lunchbox`
 3. `git submodule init && git submodule update --recursive`
-4. `sudo npm install`
+4. `npm install`
 5. `npm start`
 
 
