@@ -24,3 +24,6 @@ Steps:
 3. `git submodule update --recursive`
 4. `sudo npm install`
 5. `npm start`
+
+
+### Note: NFS mounting still requires user input that is not handled through the app yet (password to edit nfs exports). Watch your terminal window for the password prompt.
