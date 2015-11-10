@@ -41,7 +41,7 @@
             <ul class="nav navbar-top-links navbar-right">
                 <li class="dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                      Vagrant  <i class="fa fa-circle-o" id="drupalvm_status"></i>  <i class="fa fa-caret-down"></i>
+                      <span id="controlLabel"></span>  <i class="fa fa-circle-o" id="drupalvm_status"></i>  <i class="fa fa-caret-down"></i>
                     </a>
                     <ul class="dropdown-menu dropdown-user">
                         <li id="menu_drupalvm_start"><a href="#"><i class="fa fa-circle"></i> Start</a>
@@ -122,9 +122,30 @@
                           <form>
                             <div class="panel panel-default">
                               <div class="panel-heading">
-                                <h3 class="panel-title">Installed Extras</h3>
+                                <h3 class="panel-title">VM Settings</h3>
                               </div>
                               <div class="panel-body">
+                                <div class="btn-group" data-toggle="buttons">
+                                  <label class="btn btn-primary active" id="drupalvm_settings_filesync_default">
+                                    <input type="radio" name="options" autocomplete="off" checked> Default
+                                  </label>
+                                  <label class="btn btn-primary" id="drupalvm_settings_filesync_rsync">
+                                    <input type="radio" name="options" autocomplete="off"> Rsync
+                                  </label>
+                                  <label class="btn btn-primary" id="drupalvm_settings_filesync_nfs">
+                                    <input type="radio" name="options" autocomplete="off"> NFS
+                                  </label>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div class="panel panel-default" id="drupalvm_settings_installedextras">
+                              <div class="panel-heading">
+                                <h3 class="panel-title">Installed Extras</h3>
+                              </div>
+
+                              <div class="panel-body">
+                                <em>Note: reflects config file, but does not save changes yet</em>
                                 <div class="checkbox">
                                   <label><input type="checkbox" id="drupalvm_settings_adminer"> Adminer</label>
                                 </div>
@@ -160,6 +181,7 @@
                                 </div>
                               </div>
                             </div>
+
                           </form>
                       </div>
 
