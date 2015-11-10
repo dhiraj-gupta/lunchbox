@@ -1,6 +1,6 @@
 var fs = require('fs');
 var yaml = require('yamljs');
-var open = require("open");
+var shell = require('shell');
 
 var drupalvm_id = '';
 var drupalvm_name = '';
@@ -36,7 +36,7 @@ $("#menu_drupalvm_sites").click(function() {
 
 $("#menu_drupalvm_logs").click(function() {
   if(drupalvm_running) {
-    open('http://pimpmylog.drupalvm.dev');
+    shell.openExternal('http://pimpmylog.drupalvm.dev');
   }
   else {
     drupalVMAlert(
@@ -49,7 +49,7 @@ $("#menu_drupalvm_logs").click(function() {
 
 $("#menu_drupalvm_databases").click(function() {
   if(drupalvm_running) {
-    open('http://adminer.drupalvm.dev');
+    shell.openExternal('http://adminer.drupalvm.dev');
   }
   else {
     drupalVMAlert(
@@ -62,7 +62,7 @@ $("#menu_drupalvm_databases").click(function() {
 
 $("#menu_drupalvm_xhprof").click(function() {
   if(drupalvm_running) {
-    open('http://xhprof.drupalvm.dev');
+    shell.openExternal('http://xhprof.drupalvm.dev');
   }
   else {
     drupalVMAlert(
@@ -301,14 +301,14 @@ function renderSitesRow(servername) {
   link.html(servername);
   td_dns.append(link);
   link.click(function() {
-    open("http://" + servername);
+    shell.openExternal("http://" + servername);
   })
   row.append(td_dns);
 
   var td_actions = $('<td class="drupalvm_sites_icons">');
   var button_github = $("<a href='#'><i class='fa fa-2 fa-git'></i></a>");
   button_github.click(function(){
-    open('https://github.com/pfizer/www.firstmeasures.com');
+    shell.openExternal('https://github.com/');
   });
   td_actions.append(button_github);
 
