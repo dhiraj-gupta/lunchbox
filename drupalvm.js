@@ -165,7 +165,7 @@ function setVagrantDetails(details) {
 
 function runDrupalVMLunchbox() {
   updateVMStatus()
-  drupalvmBuildDashboard();
+  drupalvmBuildSitesList();
 }
 
 
