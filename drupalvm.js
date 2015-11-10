@@ -99,7 +99,8 @@ function drupalVMAlert(title, message) {
   $('#drupalvmAlertLabel').text(title)
   $('#drupalvmAlertBody').text(message)
   $('#drupalvmAlert').modal({
-    keyboard: false
+    keyboard: false,
+    backdrop: 'static'
   });
   $('#drupalvmAlert').modal('show');
 }
@@ -108,7 +109,8 @@ function drupalVMAlert(title, message) {
 function drupalVMProcessing(title) {
   $('#drupalvmProcessingLabel').text(title)
   $('#drupalvmProcessing').modal({
-    keyboard: false
+    keyboard: false,
+    backdrop: 'static'
   });
   $('#drupalvmProcessing').modal('show');
 }
