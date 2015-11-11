@@ -104,6 +104,10 @@ $("#drupalvm_settings_filesync_nfs").click(function() {
   saveFileSyncType("nfs");
 })
 
+$("#addSite").click(function() {
+  drupalVMAlert("Add site", "Adding a site - form goes in here.")
+})
+
 
 // ------ Event Handlers ------ //
 
