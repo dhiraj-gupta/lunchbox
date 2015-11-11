@@ -1,3 +1,6 @@
+require('jquery');
+require('bootstrap');
+
 var fs = require('fs');
 var yaml = require('yamljs');
 var shell = require('shell');
@@ -105,7 +108,7 @@ $("#drupalvm_settings_filesync_nfs").click(function() {
 })
 
 $("#addSite").click(function() {
-  drupalVMAlert("Add site", "Adding a site - form goes in here.")
+  collectNewSiteDetails();
 })
 
 
@@ -420,4 +423,9 @@ function saveConfigFile() {
   });
   $("#controlLabel").text("Needs re-provisioning");
   drupalvm_needsprovision = true;
+}
+
+
+function collectNewSiteDetails() {
+
 }
