@@ -1,3 +1,10 @@
 .drupalvm_sites_icons a {
   margin-left: 10px;
 }
+
+#processingLog pre{
+  color: #cdcdcd;
+  background-color: #fff;
+  border: none;
+  height: 200px;
+}

@@ -141,10 +141,10 @@ function detectDrupalVM() {
   child = exec('vagrant global-status',
     function (error, stdout, stderr) {
 
-      console.log('stdout: ' + stdout);
+      $("#processingLog pre").append(document.createTextNode('stdout: ' + stdout));
       if (error !== null) {
-        console.log('stderr: ' + stderr);
-        console.log('exec error: ' + error);
+        $("#processingLog pre").append(document.createTextNode('stderr: ' + stderr));
+        $("#processingLog pre").append(document.createTextNode('exec error: ' + error));
       }
 
       // Search for the drupalvm entry
@@ -185,24 +185,22 @@ function runDrupalVMLunchbox() {
 
 function controlVM(action) {
   var title = '';
-  var exec = require('child_process').exec,
-    child;
 
-  var cmd = 'vagrant';
+  var cmd = '';
 
   switch(action) {
     case DRUPALVM_START:
-      cmd += ' up '
+      cmd = 'up'
       title = 'Starting VM';
       break;
 
     case DRUPALVM_STOP:
-      cmd += ' halt ';
+      cmd = 'halt';
       title = 'Stopping VM';
       break;
 
     case DRUPALVM_PROVISION:
-      cmd += ' provision ';
+      cmd = 'provision';
       title = 'Re-provisioning VM';
       drupalvm_needsprovision = false;
       break;
@@ -210,61 +208,72 @@ function controlVM(action) {
 
   drupalVMProcessing(title);
 
-  cmd += drupalvm_id;
+  $("#processingLog pre").text("");
 
-  child = exec(cmd,
-    function (error, stdout, stderr) {
-      console.log('stdout: ' + stdout);
-      if (error !== null) {
-        console.log('stderr: ' + stderr);
-        console.log('exec error: ' + error);
-      }
-      updateVMStatus();
-    });
+  var spawn = require('child_process').spawn;
+  var child = spawn('vagrant',
+    [cmd, drupalvm_id]);
+
+  child.stdout.on('data',
+    function (buf) {
+        $("#processingLog pre").append(document.createTextNode(buf));
+        $("#processingLog pre").scrollTop($("#processingLog pre")[0].scrollHeight);
+    }
+  );
+
+  child.on('exit', function (exitCode) {
+    $('#drupalvmProcessing').modal('hide');
+    updateVMStatus();
+  });
 }
 
 
 function updateVMStatus() {
+  $("#processingLog pre").text("");
+
   // Check if DrupalVM is running
-  var exec = require('child_process').exec,
-    child;
+  var spawn = require('child_process').spawn;
+  var child = spawn('vagrant',
+    ['status', drupalvm_id]);
 
-  // Run vagrant global-status
-  child = exec('vagrant status ' + drupalvm_id,
-    function (error, stdout, stderr) {
-      console.log('stdout: ' + stdout);
-      if (error !== null) {
-        console.log('stderr: ' + stderr);
-        console.log('exec error: ' + error);
-      }
+  var stdout = '';
+  child.stdout.on('data',
+    function (buf) {
+        $("#processingLog pre").append(document.createTextNode(buf));
+        $("#processingLog pre").scrollTop($("#processingLog pre")[0].scrollHeight);
+        stdout += buf;
+    }
+  );
 
-      // Search for the status
-      if(stdout.indexOf("poweroff") > -1) {
-        $('#drupalvm_status').removeClass('fa-circle');
-        $('#drupalvm_status').addClass('fa-circle-o');
 
-        $('#menu_drupalvm_start').removeClass('disabled');
-        $('#menu_drupalvm_stop').addClass('disabled');
-        $('#menu_drupalvm_provision').addClass('disabled');
+  child.on('exit', function (exitCode) {
+    // Search for the status
+    if(stdout.indexOf("poweroff") > -1) {
+      $('#drupalvm_status').removeClass('fa-circle');
+      $('#drupalvm_status').addClass('fa-circle-o');
 
-        drupalvm_running = false;
-      }
-      else {
-        $('#drupalvm_status').removeClass('fa-circle-o');
-        $('#drupalvm_status').addClass('fa-circle');
+      $('#menu_drupalvm_start').removeClass('disabled');
+      $('#menu_drupalvm_stop').addClass('disabled');
+      $('#menu_drupalvm_provision').addClass('disabled');
 
-        $('#menu_drupalvm_start').addClass('disabled');
-        $('#menu_drupalvm_stop').removeClass('disabled');
-        $('#menu_drupalvm_provision').removeClass('disabled');
+      drupalvm_running = false;
+    }
+    else {
+      $('#drupalvm_status').removeClass('fa-circle-o');
+      $('#drupalvm_status').addClass('fa-circle');
 
-        drupalvm_running = true;
-      }
-      if(!drupalvm_needsprovision) {
-        $("#controlLabel").text("");
-      }
+      $('#menu_drupalvm_start').addClass('disabled');
+      $('#menu_drupalvm_stop').removeClass('disabled');
+      $('#menu_drupalvm_provision').removeClass('disabled');
 
-      $('#drupalvmProcessing').modal('hide');
-    });
+      drupalvm_running = true;
+    }
+    if(!drupalvm_needsprovision) {
+      $("#controlLabel").text("");
+    }
+
+    $('#drupalvmProcessing').modal('hide');
+  });
 }
 
 
