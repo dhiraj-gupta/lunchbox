@@ -1,6 +1,3 @@
-.drupalvm_sites_icons a {
-  margin-left: 10px;
-}
 
 #processingLog pre{
   color: #cdcdcd;
@@ -10,10 +7,9 @@
 }
 
 
- .drupalvm_section {
-   margin-top: 65px;
- }
-
+.navbar-brand>.fa {
+  margin-top: -8px;
+}
 
 
 

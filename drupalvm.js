@@ -1,7 +1,5 @@
-require('jquery');
-require('bootstrap');
 
-var fs = require('fs');
+
 var yaml = require('yamljs');
 var shell = require('shell');
 
@@ -36,7 +34,11 @@ $("#menu_drupalvm_sites").click(function() {
   drupalvmBuildSitesList();
 });
 
+$("#menu_drupalvm_tools").click(function() {
+  drupalvmBuildTools();
+});
 
+/*
 $("#menu_drupalvm_logs").click(function() {
   if(drupalvm_running) {
     shell.openExternal('http://pimpmylog.drupalvm.dev');
@@ -74,7 +76,7 @@ $("#menu_drupalvm_xhprof").click(function() {
     );
   }
 });
-
+*/
 
 $("#menu_drupalvm_settings").click(function() {
   drupalvmBuildSettings();
@@ -186,7 +188,7 @@ function setVagrantDetails(details) {
 
 function runDrupalVMLunchbox() {
   updateVMStatus()
-  drupalvmBuildSitesList();
+  drupalvmBuildDashboard();
 }
 
 
@@ -286,13 +288,22 @@ function updateVMStatus() {
 
 function drupalvmHidePanels() {
   $("#panel_drupalvm_dashboard").hide();
+  $("#menu_drupalvm_dashboard").removeClass("active");
+
   $("#panel_drupalvm_sites").hide();
+  $("#menu_drupalvm_sites").removeClass("active");
+
+  $("#panel_drupalvm_tools").hide();
+  $("#menu_drupalvm_tools").removeClass("active");
+
   $("#panel_drupalvm_settings").hide();
+  $("#menu_drupalvm_settings").removeClass("active");
 }
 
 
 function drupalvmBuildDashboard() {
   drupalvmHidePanels();
+  $("#menu_drupalvm_dashboard").addClass("active");
   $("#panel_drupalvm_dashboard").fadeIn();
 }
 
@@ -317,8 +328,15 @@ function drupalvmBuildSitesList() {
         break;
     }
   }
-
+  $("#menu_drupalvm_sites").addClass("active");
   $("#panel_drupalvm_sites").fadeIn();
+}
+
+
+function drupalvmBuildTools() {
+  drupalvmHidePanels();
+  $("#menu_drupalvm_tools").addClass("active");
+  $("#panel_drupalvm_tools").fadeIn();
 }
 
 function renderSitesRow(servername) {
@@ -401,6 +419,7 @@ function drupalvmBuildSettings() {
     $('#drupalvm_settings_' + extra).prop('checked', true);
   }
 
+  $("#menu_drupalvm_settings").addClass("active");
   $("#panel_drupalvm_settings").fadeIn();
 }
 
