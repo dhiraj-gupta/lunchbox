@@ -12,8 +12,14 @@
 }
 
 
+.badge {
+  float: right;
+}
 
-
+.drupalVMHeaderStatus {
+  font-size: .7em;
+  opacity: .6;
+}
 
  /*
   * Base structure

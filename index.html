@@ -28,25 +28,10 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="#"> <i class="fa fa-drupal fa-2x fa-pull-left"></i> DrupalVM</a>
+          <a class="navbar-brand" href="#"> <i class="fa fa-drupal fa-2x fa-pull-left"></i> DrupalVM <span class="drupalVMHeaderStatus"></span></a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
           <ul class="nav navbar-nav navbar-right">
-
-            <li class="dropdown">
-                <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                  <span id="controlLabel">Vagrant</span>  <i class="fa fa-circle-o" id="drupalvm_status"></i>  <i class="fa fa-caret-down"></i>
-                </a>
-                <ul class="dropdown-menu">
-                    <li id="menu_drupalvm_start"><a href="#"><i class="fa fa-circle"></i> Start</a>
-                    </li>
-                    <li id="menu_drupalvm_stop"><a href="#"><i class="fa fa-circle-o"></i> Stop</a>
-                    </li>
-                    <li class="divider"></li>
-                    <li id="menu_drupalvm_provision"><a href="#"><i class="fa fa-refresh"></i> Provision</a>
-                    </li>
-                </ul>
-            </li>
             <li><a href="#">Help</a></li>
           </ul>
         </div>
@@ -61,21 +46,10 @@
                 <a href="#"><i class="fa fa-dashboard"></i> Dashboard</a>
             </li>
             <li id="menu_drupalvm_sites">
-                <a href="#"><i class="fa fa-globe"></i> Sites</a>
+                <a href="#"><i class="fa fa-globe"></i> Sites  <span class="badge">0</span></a>
             </li>
             <li id="menu_drupalvm_tools">
               <a href="#"><i class="fa fa-wrench"></i> Tools<span class="fa arrow"></span></a>
-                <!--<ul class="nav nav-stacked">
-                  <li>
-                    <a href="#" id="menu_drupalvm_logs">Logs</a>
-                  </li>
-                  <li>
-                    <a href="#" id="menu_drupalvm_databases">Databases</a>
-                  </li>
-                  <li>
-                    <a href="#" id="menu_drupalvm_xhprof">XHProf</a>
-                  </li>
-                </ul>-->
               </li>
               <li id="menu_drupalvm_settings">
                   <a href="#"><i class="fa fa-cogs"></i> Settings</a>
@@ -83,10 +57,32 @@
           </ul>
         </div>
         <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+          <div id="reprovisionAlert" class="alert alert-warning" style="display: none;" role="alert">DrupalVM needs to be re-provisioned with your new settings. <a href="#" id="provisionLink">Run this now.</a></div>
 
-          <!-- DASHBOARD VIDE -->
+          <!-- DASHBOARD VIEW -->
           <div id="panel_drupalvm_dashboard" class="drupalvm_section" style="display: none;">
+            <div style="float: right;">
+              <button id="drupalvm_start" class="btn btn-primary" type="submit"><span class="glyphicon glyphicon-play" aria-hidden="true"></span></button>
+              <button id="drupalvm_stop" class="btn btn-primary" type="submit"><span class="glyphicon glyphicon-stop" aria-hidden="true"></span></button>
+              <button id="drupalvm_provision" class="btn btn-warning" type="submit" style="display: none;"><span class="glyphicon glyphicon-retweet" aria-hidden="true"></span></button>
+            </div>
             <h1 class="page-header">Dashboard</h1>
+
+            <br><br><br>
+
+            <h4>Versions</h4>
+            <table class="table table-striped">
+              <tbody>
+                <tr>
+                  <th scope="row">Lunchbox</th>
+                  <td>v.0.1-alpha</td>
+                </tr>
+                <tr>
+                  <th scope="row">Vagrant</th>
+                  <td>v.1.7.4</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
           <!-- END DASHBOARD VIEW -->
 
@@ -186,59 +182,24 @@
       </div>
     </div>
 
-    <!-- Alert Modal -->
-    <div class="modal fade" id="drupalvmAlert" tabindex="-1" role="dialog" aria-labelledby="drupalvmAlertLabel">
-      <div class="modal-dialog" role="document">
-        <div class="modal-content">
-          <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-            <h4 class="modal-title" id="drupalvmAlertLabel">Modal title</h4>
-          </div>
-          <div class="modal-body">
-            <div id="drupalvmAlertBody">
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-primary" data-dismiss="modal">Ok</button>
-        </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Processing Modal -->
-    <div class="modal fade" id="drupalvmProcessing" tabindex="-1" role="dialog" aria-labelledby="drupalvmProcessingLabel">
-      <div class="modal-dialog" role="document">
-        <div class="modal-content">
-          <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-            <h4 class="modal-title" id="drupalvmProcessingLabel">Modal title</h4>
-          </div>
-          <div class="modal-body">
-            <div class="progress">
-              <div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%">
-                <span class="sr-only">100% Complete</span>
-              </div>
-            </div>
-            Details
-            <div id="processingLog">
-              <pre></pre>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script>
       window.$ = window.jQuery = require('./node_modules/jquery/dist/jquery.min.js');
     </script>
+
     <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
 
     <script>
       require("./drupalvm.js")
+
+      var $ = require('jquery');
+      global.jQuery = require("jquery");
+      window.$ = $;
+      var bootstrap = require('bootstrap');
+      var bootbox = require('bootbox');
+
     </script>
   </body>
 </html>

@@ -1,7 +1,6 @@
-
-
 var yaml = require('yamljs');
 var shell = require('shell');
+var bootbox = require('bootbox');
 
 var drupalvm_id = '';
 var drupalvm_name = '';
@@ -29,7 +28,6 @@ $("#menu_drupalvm_dashboard").click(function() {
   drupalvmBuildDashboard();
 });
 
-
 $("#menu_drupalvm_sites").click(function() {
   drupalvmBuildSitesList();
 });
@@ -38,62 +36,30 @@ $("#menu_drupalvm_tools").click(function() {
   drupalvmBuildTools();
 });
 
-/*
-$("#menu_drupalvm_logs").click(function() {
-  if(drupalvm_running) {
-    shell.openExternal('http://pimpmylog.drupalvm.dev');
-  }
-  else {
-    drupalVMAlert(
-      "DrupalVM not started",
-      "You need to start DrupalVM before using this functionality."
-    );
-  }
-});
-
-
-$("#menu_drupalvm_databases").click(function() {
-  if(drupalvm_running) {
-    shell.openExternal('http://adminer.drupalvm.dev');
-  }
-  else {
-    drupalVMAlert(
-      "DrupalVM not started",
-      "You need to start DrupalVM before using this functionality."
-    );
-  }
-});
-
-
-$("#menu_drupalvm_xhprof").click(function() {
-  if(drupalvm_running) {
-    shell.openExternal('http://xhprof.drupalvm.dev');
-  }
-  else {
-    drupalVMAlert(
-      "DrupalVM not started",
-      "You need to start DrupalVM before using this functionality."
-    );
-  }
-});
-*/
-
 $("#menu_drupalvm_settings").click(function() {
   drupalvmBuildSettings();
 });
 
+$("#provisionLink").click(function() {
+  if(drupalvm_running) {
+    controlVM(DRUPALVM_PROVISION);
+  }
+  else {
+    controlVM(DRUPALVM_START);
+  }
+});
 
-$("#menu_drupalvm_start").click(function() {
+$("#drupalvm_start").click(function() {
   controlVM(DRUPALVM_START);
 });
 
 
-$("#menu_drupalvm_stop").click(function() {
+$("#drupalvm_stop").click(function() {
   controlVM(DRUPALVM_STOP);
 });
 
 
-$("#menu_drupalvm_provision").click(function() {
+$("#drupalvm_provision").click(function() {
   controlVM(DRUPALVM_PROVISION);
 });
 
@@ -114,26 +80,26 @@ $("#addSite").click(function() {
 })
 
 
+
+
 // ------ Event Handlers ------ //
 
-function drupalVMAlert(title, message) {
-  $('#drupalvmAlertLabel').text(title)
-  $('#drupalvmAlertBody').text(message)
-  $('#drupalvmAlert').modal({
-    keyboard: false,
-    backdrop: 'static'
-  });
-  $('#drupalvmAlert').modal('show');
-}
+function drupalVMProcessing(modalTitle) {
 
+  var contents = "<div class='progress'>";
+  contents+= "<div class='progress-bar progress-bar-striped active' role=progressbar' aria-valuenow='100' aria-valuemin='0' aria-valuemax='100' style='width: 100%''>";
+  contents+= "<span class='sr-only'>100% Complete</span>";
+  contents+= "</div>";
+  contents+= "</div>";
+  contents+= "Details";
+  contents+= "<div id='processingLog'>";
+  contents+= "<pre></pre>";
+  contents+= "</div>";
 
-function drupalVMProcessing(title) {
-  $('#drupalvmProcessingLabel').text(title)
-  $('#drupalvmProcessing').modal({
-    keyboard: false,
-    backdrop: 'static'
+  var dialog = bootbox.dialog({
+    title: modalTitle,
+    message: contents
   });
-  $('#drupalvmProcessing').modal('show');
 }
 
 
@@ -143,33 +109,33 @@ function checkPrerequisites() {
 
 
 function detectDrupalVM() {
-  var exec = require('child_process').exec,
-    child;
+  var spawn = require('child_process').spawn;
+  var child = spawn('vagrant', ['global-status']);
 
-  // Run vagrant global-status
-  child = exec('vagrant global-status',
-    function (error, stdout, stderr) {
+  var stdout = '';
+  child.stdout.on('data',
+    function (buf) {
+        stdout+= buf;
+        $("#processingLog pre").append(document.createTextNode(buf));
+        $("#processingLog pre").scrollTop($("#processingLog pre")[0].scrollHeight);
+    }
+  );
 
-      $("#processingLog pre").append(document.createTextNode('stdout: ' + stdout));
-      if (error !== null) {
-        $("#processingLog pre").append(document.createTextNode('stderr: ' + stderr));
-        $("#processingLog pre").append(document.createTextNode('exec error: ' + error));
+  child.on('exit', function (exitCode) {
+    // Search for the drupalvm entry
+    lines = stdout.split("\n");
+    for (var x in lines) {
+      var line = lines[x];
+
+      if(line.indexOf("drupalvm") > -1) {
+        // Sample: d21e8e6  drupalvm virtualbox poweroff /home/nate/Projects/drupal-vm
+        line = line.trim();
+        var parts = line.split(/\s+/);
+        setVagrantDetails(parts);
+        break;
       }
-
-      // Search for the drupalvm entry
-      lines = stdout.split("\n");
-      for (var x in lines) {
-        var line = lines[x];
-
-        if(line.indexOf("drupalvm") > -1) {
-          // Sample: d21e8e6  drupalvm virtualbox poweroff /home/nate/Projects/drupal-vm
-          line = line.trim();
-          var parts = line.split(/\s+/);
-          setVagrantDetails(parts);
-          break;
-        }
-      }
-    });
+    }
+  });
 }
 
 
@@ -187,14 +153,13 @@ function setVagrantDetails(details) {
 
 
 function runDrupalVMLunchbox() {
-  updateVMStatus()
+  updateVMStatus();
   drupalvmBuildDashboard();
 }
 
 
 function controlVM(action) {
   var title = '';
-
   var cmd = '';
 
   switch(action) {
@@ -211,7 +176,7 @@ function controlVM(action) {
     case DRUPALVM_PROVISION:
       cmd = 'provision';
       title = 'Re-provisioning VM';
-      drupalvm_needsprovision = false;
+
       break;
   }
 
@@ -231,15 +196,34 @@ function controlVM(action) {
   );
 
   child.on('exit', function (exitCode) {
-    $('#drupalvmProcessing').modal('hide');
-    updateVMStatus();
+
+    switch(action) {
+      case DRUPALVM_START:
+        if(drupalvm_needsprovision) {
+          bootbox.hideAll();
+
+          controlVM(DRUPALVM_PROVISION);
+        }
+        else {
+          updateVMStatus();
+        }
+        break;
+
+      case DRUPALVM_STOP:
+        updateVMStatus();
+        break;
+
+      case DRUPALVM_PROVISION:
+        drupalvm_needsprovision = false;
+        $("#reprovisionAlert").hide("fast");
+        updateVMStatus();
+        break;
+    }
   });
 }
 
 
 function updateVMStatus() {
-  $("#processingLog pre").text("");
-
   // Check if DrupalVM is running
   var spawn = require('child_process').spawn;
   var child = spawn('vagrant',
@@ -248,40 +232,25 @@ function updateVMStatus() {
   var stdout = '';
   child.stdout.on('data',
     function (buf) {
-        $("#processingLog pre").append(document.createTextNode(buf));
-        $("#processingLog pre").scrollTop($("#processingLog pre")[0].scrollHeight);
         stdout += buf;
     }
   );
 
-
   child.on('exit', function (exitCode) {
     // Search for the status
     if(stdout.indexOf("poweroff") > -1) {
-      $('#drupalvm_status').removeClass('fa-circle');
-      $('#drupalvm_status').addClass('fa-circle-o');
-
-      $('#menu_drupalvm_start').removeClass('disabled');
-      $('#menu_drupalvm_stop').addClass('disabled');
-      $('#menu_drupalvm_provision').addClass('disabled');
-
+      $('#drupalvm_start').removeClass('disabled');
+      $('#drupalvm_stop').addClass('disabled');
+      $('.drupalVMHeaderStatus').text("(Stopped)");
       drupalvm_running = false;
     }
     else {
-      $('#drupalvm_status').removeClass('fa-circle-o');
-      $('#drupalvm_status').addClass('fa-circle');
-
-      $('#menu_drupalvm_start').addClass('disabled');
-      $('#menu_drupalvm_stop').removeClass('disabled');
-      $('#menu_drupalvm_provision').removeClass('disabled');
-
+      $('#drupalvm_start').addClass('disabled');
+      $('#drupalvm_stop').removeClass('disabled');
+      $('.drupalVMHeaderStatus').text("(Running)");
       drupalvm_running = true;
     }
-    if(!drupalvm_needsprovision) {
-      $("#controlLabel").text("");
-    }
-
-    $('#drupalvmProcessing').modal('hide');
+    bootbox.hideAll();
   });
 }
 
@@ -339,6 +308,7 @@ function drupalvmBuildTools() {
   $("#panel_drupalvm_tools").fadeIn();
 }
 
+
 function renderSitesRow(servername) {
   var name = servername.split(".")[0];
   var row = $('<tr>');
@@ -366,7 +336,7 @@ function renderSitesRow(servername) {
 
   var button_install = $("<a href='#'><i class='fa fa-2 fa-arrow-down'></i></a>");
   button_install.click(function(){
-    drupalVMAlert("Composer install", "When implemented, this button will invoke a 'composer install' to set up the docroot for the project.")
+    alert("When implemented, this button will invoke a 'composer install' to set up the docroot for the project.")
   });
   td_actions.append(button_install);
 
@@ -377,13 +347,13 @@ function renderSitesRow(servername) {
 
   var button_edit = $('<a href="#"><i class="fa fa-2 fa-pencil"></i></a>');
   button_edit.click(function(){
-    drupalVMAlert("Edit entry", "When implemented, this button will allow you to edit this site entry.")
+    alert("When implemented, this button will allow you to edit this site entry.")
   });
   td_edit.append(button_edit);
 
   var button_delete = $('<a href="#"><i class="fa fa-2 fa-ban"></i></a>');
   button_delete.click(function(){
-    drupalVMAlert("Delete entry", "When implemented, this button will allow you to delete this site entry.")
+    alert("When implemented, this button will allow you to delete this site entry.")
   });
   td_edit.append(button_delete);
 
@@ -423,6 +393,7 @@ function drupalvmBuildSettings() {
   $("#panel_drupalvm_settings").fadeIn();
 }
 
+
 function saveFileSyncType(file_sync_type) {
 
   // Only update if the value is actually different.
@@ -432,6 +403,7 @@ function saveFileSyncType(file_sync_type) {
   }
 }
 
+
 function saveConfigFile() {
   yamlString = YAML.stringify(drupalvm_config, 2);
   var fs = require('fs');
@@ -440,11 +412,11 @@ function saveConfigFile() {
           return console.log(err);
       }
   });
-  $("#controlLabel").text("Needs re-provisioning");
   drupalvm_needsprovision = true;
+  $("#reprovisionAlert").show("fast");
 }
 
 
 function collectNewSiteDetails() {
-
+  bootbox.alert("Your message here…")
 }
