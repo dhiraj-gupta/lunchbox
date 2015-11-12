@@ -45,6 +45,17 @@
   opacity: .9;
 }
 
+
+#drupalVMReset {
+  margin-top: 100px;
+  padding-top: 10px;
+  text-align: center;
+}
+
+
+
+
+
  /*
   * Base structure
   */

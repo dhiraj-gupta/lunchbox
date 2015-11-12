@@ -79,7 +79,13 @@ $("#addSite").click(function() {
   collectNewSiteDetails();
 })
 
-
+$("#drupalVMReset>button").click(function() {
+  bootbox.confirm("Reset all settings?", function(result) {
+    if(result) {
+      drupalVMResetSettings();
+    }
+  });
+});
 
 
 // ------ Event Handlers ------ //
@@ -280,7 +286,6 @@ function drupalvmBuildDashboard() {
 function drupalvmBuildSitesList() {
   drupalvmHidePanels();
   $('#drupalvmSites').html("");
-  var numSites = 0;
 
   for(var x in drupalvm_config.apache_vhosts) {
     var servername = drupalvm_config.apache_vhosts[x].servername;
@@ -296,12 +301,10 @@ function drupalvmBuildSitesList() {
 
       default:
         $('#drupalvmSites').append(renderSitesRow(servername));
-        numSites++;
         break;
     }
   }
 
-  $("#menu_drupalvm_sites span.badge").html(numSites);
   $("#menu_drupalvm_sites").addClass("active");
   $("#panel_drupalvm_sites").fadeIn();
 }
@@ -529,4 +532,13 @@ function deleteSite(projectName, deleteSettings) {
 
   saveConfigFile();
   drupalvmBuildSitesList();
+}
+
+
+function drupalVMResetSettings() {
+  var config_file = drupalvm_home + '/example.config.yml';
+  drupalvm_config = yaml.load(config_file);
+  saveConfigFile();
+
+  drupalvmBuildSettings();
 }
