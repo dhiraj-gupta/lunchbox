@@ -241,13 +241,13 @@ function updateVMStatus() {
     if(stdout.indexOf("poweroff") > -1) {
       $('#drupalvm_start').removeClass('disabled');
       $('#drupalvm_stop').addClass('disabled');
-      $('.drupalVMHeaderStatus').text("(Stopped)");
+      $('.drupalVMHeaderStatus').text("Stopped");
       drupalvm_running = false;
     }
     else {
       $('#drupalvm_start').addClass('disabled');
       $('#drupalvm_stop').removeClass('disabled');
-      $('.drupalVMHeaderStatus').text("(Running)");
+      $('.drupalVMHeaderStatus').text("Running");
       drupalvm_running = true;
     }
     bootbox.hideAll();

@@ -10,11 +10,12 @@
   padding-top: 25px;
   padding-bottom: 23px;
   border-bottom: 1px solid #eee;
+  height: 90px;
 }
 
 #menu_drupalvm_dashboard>a>i.fa-drupal {
-  margin-right: 10px;
-  top: -20px;
+  margin-right: 20px;
+  top: -10px;
   position: relative;
 }
 
@@ -23,8 +24,9 @@
 }
 
 .drupalVMHeaderStatus {
-  font-size: .7em;
+  font-size: .9em;
   opacity: .6;
+  display: block;
 }
 
 .drupalvm_sites_icons {
@@ -35,8 +37,12 @@
   margin-left: 10px;
 }
 
+.modal-backdrop {
+    background-color: #ccc
+}
+
 .modal-backdrop.in {
-  opacity: .7;
+  opacity: .9;
 }
 
  /*
