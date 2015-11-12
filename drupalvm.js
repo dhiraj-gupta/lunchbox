@@ -358,7 +358,7 @@ function renderSitesRow(servername) {
 
   var button_delete = $('<a href="#"><i class="fa fa-2 fa-ban"></i></a>');
   button_delete.click(function(){
-    alert("When implemented, this button will allow you to delete this site entry.")
+    promptDeleteDetails(name);
   });
   td_edit.append(button_delete);
 
@@ -470,16 +470,62 @@ function createNewSite(projectName) {
 }
 
 
-function promptDeleteDetails() {
+function promptDeleteDetails(projectName) {
   //TODO: Prompt to ask how much of the record to delete
   var deleteSettings = {
     "removeDirectory": true,
     "removeApacheVhost": true,
     "removeDatabase": true
   }
-  deleteSite(projectName, deleteSettings)
+
+  bootbox.dialog({
+    title: "Delete site: " + projectName,
+    message: 'This will delete:'
+      + '<ul>'
+      + '<li>apache vhost</li>'
+      + '<li>database</li>'
+      + '<li>site directory and files</li>'
+      + '</ul>',
+    buttons: {
+      success: {
+        label: "Cancel",
+        className: "btn-default",
+        callback: function() {
+          // Do nothing.
+        }
+      },
+      delete: {
+        label: "Delete",
+        className: "btn-danger",
+        callback: function () {
+          deleteSite(projectName, deleteSettings);
+        }
+      }
+    }
+  });
 }
 
+
 function deleteSite(projectName, deleteSettings) {
-  //TODO: Remove apache vhost entry
+  // Remove apache vhost entry
+  if(deleteSettings.removeDirectory) {
+    //TODO:
+  }
+
+  if(deleteSettings.removeApacheVhost) {
+    for(var x in drupalvm_config.apache_vhosts) {
+      var servername = drupalvm_config.apache_vhosts[x].servername;
+      var name = servername.split(".")[0];
+      if(name == projectName) {
+        drupalvm_config.apache_vhosts.splice(x, 1);
+      }
+    }
+  }
+
+  if(deleteSettings.removeDatabase) {
+    //TODO:
+  }
+
+  saveConfigFile();
+  drupalvmBuildSitesList();
 }
