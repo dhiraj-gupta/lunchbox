@@ -318,10 +318,6 @@ function renderSitesRow(servername) {
   var name = servername.split(".")[0];
   var row = $('<tr>');
 
-  var td_name = $('<td>');
-  td_name.html(name);
-  row.append(td_name);
-
   var td_dns = $('<td>');
   var link = $('<a>');
   link.attr('href', '#');
@@ -331,6 +327,11 @@ function renderSitesRow(servername) {
     shell.openExternal("http://" + servername);
   })
   row.append(td_dns);
+
+  var td_dbname = $('<td>');
+  td_dbname.html(name);
+  row.append(td_dbname);
+
 
   var td_actions = $('<td class="drupalvm_sites_icons">');
   var button_github = $("<a href='#'><i class='fa fa-2 fa-git'></i></a>");
