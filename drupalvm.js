@@ -280,11 +280,13 @@ function drupalvmBuildDashboard() {
 function drupalvmBuildSitesList() {
   drupalvmHidePanels();
   $('#drupalvmSites').html("");
+  var numSites = 0;
 
   for(var x in drupalvm_config.apache_vhosts) {
     var servername = drupalvm_config.apache_vhosts[x].servername;
 
     switch(servername) {
+      // We don't want to include these default entries.
       case "{{ drupal_domain }}":
       case "adminer.drupalvm.dev":
       case "xhprof.drupalvm.dev":
@@ -293,10 +295,13 @@ function drupalvmBuildSitesList() {
         break;
 
       default:
-        $('#drupalvmSites').append(renderSitesRow(servername))
+        $('#drupalvmSites').append(renderSitesRow(servername));
+        numSites++;
         break;
     }
   }
+
+  $("#menu_drupalvm_sites span.badge").html(numSites);
   $("#menu_drupalvm_sites").addClass("active");
   $("#panel_drupalvm_sites").fadeIn();
 }
@@ -418,5 +423,63 @@ function saveConfigFile() {
 
 
 function collectNewSiteDetails() {
-  bootbox.alert("Your message here…")
+  bootbox.prompt({
+    title: "New empty project",
+    value: "ProjectName",
+    callback: function(result) {
+      if (result === null) {
+        // Do nothing.
+      } else {
+        //TODO: Check for existing entry
+        createNewSite(result.toLowerCase());
+      }
+    }
+  });
+}
+
+
+function createNewSite(projectName) {
+  // Create the directory
+  var fs = require('fs');
+  var dir = drupalvm_config.vagrant_synced_folders[0].local_path + "/" + projectName;
+
+  if (!fs.existsSync(dir)){
+      fs.mkdirSync(dir);
+  }
+
+  //TODO: perform a git init?
+
+  // Create the apache vhost
+  var newSite = new Object();
+  newSite.servername = projectName + ".drupalvm.dev";
+  newSite.documentroot = "/var/www/" + projectName;
+  drupalvm_config.apache_vhosts.push(newSite);
+
+  //TODO: nginx?
+
+  //TODO: Create the database
+  var newDatabase = new Object();
+  newDatabase.name = projectName;
+  newDatabase.encoding = "utf8";
+  newDatabase.collation = "utf8_general_ci";
+  drupalvm_config.mysql_databases.push(newDatabase);
+
+  saveConfigFile();
+
+  drupalvmBuildSitesList();
+}
+
+
+function promptDeleteDetails() {
+  //TODO: Prompt to ask how much of the record to delete
+  var deleteSettings = {
+    "removeDirectory": true,
+    "removeApacheVhost": true,
+    "removeDatabase": true
+  }
+  deleteSite(projectName, deleteSettings)
+}
+
+function deleteSite(projectName, deleteSettings) {
+  //TODO: Remove apache vhost entry
 }

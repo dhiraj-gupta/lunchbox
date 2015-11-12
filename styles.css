@@ -21,6 +21,17 @@
   opacity: .6;
 }
 
+.drupalvm_sites_icons {
+  text-align: right;
+}
+
+.drupalvm_sites_icons a {
+  margin-left: 10px;
+}
+
+
+
+
  /*
   * Base structure
   */
