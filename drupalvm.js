@@ -63,6 +63,26 @@ $("#drupalvm_provision").click(function() {
   controlVM(DRUPALVM_PROVISION);
 });
 
+$("#vagrant_ip").change(function() {
+  saveVMSettings("vagrant_ip");
+});
+
+$("#vagrant_hostname").change(function() {
+  saveVMSettings("vagrant_hostname");
+});
+
+$("#vagrant_synced_folders").change(function() {
+  saveVMSettings("vagrant_synced_folders");
+});
+
+$("#vagrant_memory").change(function() {
+  saveVMSettings("vagrant_memory");
+});
+
+$("#vagrant_cpus").change(function() {
+  saveVMSettings("vagrant_cpus");
+});
+
 $("#drupalvm_settings_filesync_default").click(function() {
   saveFileSyncType("");
 })
@@ -74,6 +94,8 @@ $("#drupalvm_settings_filesync_rsync").click(function() {
 $("#drupalvm_settings_filesync_nfs").click(function() {
   saveFileSyncType("nfs");
 })
+
+
 
 $("#addSite").click(function() {
   collectNewSiteDetails();
@@ -375,6 +397,21 @@ function renderSitesRow(servername) {
 function drupalvmBuildSettings() {
   drupalvmHidePanels();
 
+  // IP address
+  $("#vagrant_ip").val(drupalvm_config.vagrant_ip);
+
+  // Hostname
+  $("#vagrant_hostname").val(drupalvm_config.vagrant_hostname);
+
+  // Local files
+  $("#vagrant_synced_folders").val(drupalvm_config.vagrant_synced_folders[0].local_path);
+
+  // Memory
+  $("#vagrant_memory").val(drupalvm_config.vagrant_memory);
+
+  // CPUs
+  $("#vagrant_cpus").val(drupalvm_config.vagrant_cpus);
+
   // VM file sync mechanism
   var file_sync_type = drupalvm_config.vagrant_synced_folders[0].type;
   switch(file_sync_type) {
@@ -403,8 +440,33 @@ function drupalvmBuildSettings() {
 }
 
 
-function saveFileSyncType(file_sync_type) {
+function saveVMSettings(el) {
+  switch(el) {
+    case "vagrant_ip":
+      drupalvm_config.vagrant_ip = $("#vagrant_ip").val();
+      break;
 
+    case "vagrant_hostname":
+      drupalvm_config.vagrant_hostname = $("#vagrant_hostname").val();
+      break;
+
+    case "vagrant_memory":
+      drupalvm_config.vagrant_memory = parseInt($("#vagrant_memory").val());
+      break;
+
+    case "vagrant_cpus":
+      drupalvm_config.vagrant_cpus = parseInt( $("#vagrant_cpus").val() );
+      break;
+
+    case "vagrant_synced_folders":
+      drupalvm_config.vagrant_synced_folders[0].local_path = $("#vagrant_synced_folders").val();
+      break;
+  }
+  saveConfigFile();
+}
+
+
+function saveFileSyncType(file_sync_type) {
   // Only update if the value is actually different.
   if(file_sync_type != drupalvm_config.vagrant_synced_folders[0].type) {
     drupalvm_config.vagrant_synced_folders[0].type = file_sync_type;
