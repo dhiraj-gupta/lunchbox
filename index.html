@@ -52,12 +52,20 @@
 
             <br><br><br>
 
-            <h4>Versions</h4>
-            <table class="table table-striped">
+            <h6>Debugging info</h6>
+            <table class="table table-striped" id="versionsTable">
               <tbody>
                 <tr>
-                  <th scope="row">Lunchbox</th>
-                  <td>v.0.1-alpha</td>
+                  <th scope="row">Node</th>
+                  <td><script>document.write(process.versions.node)</script></td>
+                </tr>
+                <tr>
+                  <th scope="row">Chrome</th>
+                  <td><script>document.write(process.versions.chrome)</script></td>
+                </tr>
+                <tr>
+                  <th scope="row">Electron</th>
+                  <td><script>document.write(process.versions.electron)</script></td>
                 </tr>
                 <tr>
                   <th scope="row">Vagrant</th>
