@@ -15,7 +15,7 @@ app.on('ready', function() {
     height: 600
   });
 
-  mainWindow.loadUrl('file://' + __dirname + '/index.html');
+  mainWindow.loadUrl('file://' + __dirname + '/drupalvm/index.html');
 
   mainWindow.setMenuBarVisibility(false);
 
