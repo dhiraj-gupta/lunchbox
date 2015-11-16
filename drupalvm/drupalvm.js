@@ -95,6 +95,17 @@ $("#drupalvm_settings_filesync_nfs").click(function() {
   saveFileSyncType("nfs");
 })
 
+$("#btnAdminer").click(function() {
+  shell.openExternal('http://adminer.drupalvm.dev');
+})
+
+$("#btnPimpMyLog").click(function() {
+  shell.openExternal('http://pimpmylog.drupalvm.dev');
+})
+
+$("#btnXHProf").click(function() {
+  shell.openExternal('http://xhprof.drupalvm.dev');
+})
 
 
 $("#addSite").click(function() {
