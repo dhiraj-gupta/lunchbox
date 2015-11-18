@@ -235,7 +235,6 @@ function controlVM(action) {
   );
 
   child.on('exit', function (exitCode) {
-
     switch(action) {
       case DRUPALVM_START:
         if(drupalvm_needsprovision) {
@@ -434,7 +433,7 @@ function createNewSite(projectName) {
 
   // Create the apache vhost
   var newSite = new Object();
-  newSite.servername = projectName + ".drupalvm.dev";
+  newSite.servername = projectName + "." + drupalvm_config.vagrant_hostname;
   newSite.documentroot = "/var/www/" + projectName;
   drupalvm_config.apache_vhosts.push(newSite);
 
