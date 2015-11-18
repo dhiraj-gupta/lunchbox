@@ -405,22 +405,40 @@ function renderSitesRow(servername) {
 
 
 function collectNewSiteDetails() {
-  bootbox.prompt({
-    title: "New empty project",
-    value: "ProjectName",
-    callback: function(result) {
-      if (result === null) {
-        // Do nothing.
-      } else {
-        //TODO: Check for existing entry
-        createNewSite(result.toLowerCase());
+  bootbox.dialog({
+    title: "New project",
+    message: '<div class="row">  ' +
+      '<div class="col-md-12"> ' +
+      '<form class="form-horizontal"> ' +
+      '<div class="form-group"> ' +
+      '<label class="col-md-3 control-label" for="name">Project name</label> ' +
+      '<div class="col-md-9"> ' +
+      '<input id="project_name" name="project_name" type="text" placeholder="" class="form-control input-md"> ' +
+      '</div> ' +
+      '</div> ' +
+      '<div class="form-group"> ' +
+      '<label class="col-md-3 control-label" for="name">Git URL</label> ' +
+      '<div class="col-md-9"> ' +
+      '<input id="project_git_url" name="project_git_url" type="text" placeholder="" class="form-control input-md"> ' +
+      '</div> ' +
+      '</div> ' +
+      '</form> </div>  </div>',
+    buttons: {
+      success: {
+        label: "Create",
+        className: "btn-primary",
+        callback: function () {
+          var project_name = $('#project_name').val();
+          var project_git_url = $('#project_git_url').val();
+          createNewSite(project_name.toLowerCase(), project_git_url);
+        }
       }
     }
   });
 }
 
 
-function createNewSite(projectName) {
+function createNewSite(projectName, projectGitUrl) {
   // Create the directory
   var fs = require('fs');
   var dir = drupalvm_config.vagrant_synced_folders[0].local_path + "/" + projectName;
@@ -429,8 +447,36 @@ function createNewSite(projectName) {
       fs.mkdirSync(dir);
   }
 
-  //TODO: perform a git init?
+  // Perform a git init
+  if(projectGitUrl) {
+    var spawn = require('child_process').spawn;
+    var child = spawn('git',
+      ['clone', projectGitUrl, dir]);
 
+    var stdout = '';
+    child.stdout.on('data',
+      function (buf) {
+          stdout += buf;
+      }
+    );
+
+    child.on('exit', function (exitCode) {
+      // Search for the status
+      if(stdout.indexOf("poweroff") > -1) {
+        $('#drupalvm_start').removeClass('disabled');
+        $('#drupalvm_stop').addClass('disabled');
+        $('.drupalVMHeaderStatus').text("Stopped");
+        drupalvm_running = false;
+      }
+      else {
+        $('#drupalvm_start').addClass('disabled');
+        $('#drupalvm_stop').removeClass('disabled');
+        $('.drupalVMHeaderStatus').text("Running");
+        drupalvm_running = true;
+      }
+      bootbox.hideAll();
+    });
+  }
   // Create the apache vhost
   var newSite = new Object();
   newSite.servername = projectName + "." + drupalvm_config.vagrant_hostname;
