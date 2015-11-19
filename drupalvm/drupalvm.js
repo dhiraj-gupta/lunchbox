@@ -14,6 +14,7 @@ var drupalvm_running = false;
 var DRUPALVM_START = "start";
 var DRUPALVM_STOP = "stop";
 var DRUPALVM_PROVISION = "provision";
+var DRUPALVM_RELOAD = "reload";
 
 $( document ).ready( function() {
   drupalVMProcessing("Reading configurations ...")
@@ -60,7 +61,12 @@ $("#drupalvm_stop").click(function() {
 
 
 $("#drupalvm_provision").click(function() {
-  controlVM(DRUPALVM_PROVISION);
+  if(drupalvm_running) {
+    controlVM(DRUPALVM_PROVISION);
+  }
+  else {
+    controlVM(DRUPALVM_START);
+  }
 });
 
 $("#vagrant_ip").change(function() {
@@ -160,6 +166,13 @@ function detectDrupalVM() {
     }
   );
 
+  child.stderr.on('data',
+    function (buf) {
+        $("#processingLog pre").append(document.createTextNode(buf));
+        $("#processingLog pre").scrollTop($("#processingLog pre")[0].scrollHeight);
+    }
+  );
+
   child.on('exit', function (exitCode) {
     // Search for the drupalvm entry
     lines = stdout.split("\n");
@@ -215,8 +228,12 @@ function controlVM(action) {
     case DRUPALVM_PROVISION:
       cmd = 'provision';
       title = 'Re-provisioning VM';
-
       break;
+
+      case DRUPALVM_RELOAD:
+        cmd = 'reload';
+        title = 'Reloading VM';
+        break;
   }
 
   drupalVMProcessing(title);
@@ -229,6 +246,13 @@ function controlVM(action) {
 
   child.stdout.on('data',
     function (buf) {
+      $("#processingLog pre").append(document.createTextNode(buf));
+      $("#processingLog pre").scrollTop($("#processingLog pre")[0].scrollHeight);
+    }
+  );
+
+  child.stderr.on('data',
+    function (buf) {
         $("#processingLog pre").append(document.createTextNode(buf));
         $("#processingLog pre").scrollTop($("#processingLog pre")[0].scrollHeight);
     }
@@ -239,7 +263,6 @@ function controlVM(action) {
       case DRUPALVM_START:
         if(drupalvm_needsprovision) {
           bootbox.hideAll();
-
           controlVM(DRUPALVM_PROVISION);
         }
         else {
@@ -248,12 +271,14 @@ function controlVM(action) {
         break;
 
       case DRUPALVM_STOP:
+      case DRUPALVM_RELOAD:
         updateVMStatus();
         break;
 
       case DRUPALVM_PROVISION:
         drupalvm_needsprovision = false;
         $("#reprovisionAlert").hide("fast");
+        bootbox.hideAll();
         updateVMStatus();
         break;
     }
@@ -271,6 +296,13 @@ function updateVMStatus() {
   child.stdout.on('data',
     function (buf) {
         stdout += buf;
+    }
+  );
+
+  child.stderr.on('data',
+    function (buf) {
+        $("#processingLog pre").append(document.createTextNode(buf));
+        $("#processingLog pre").scrollTop($("#processingLog pre")[0].scrollHeight);
     }
   );
 
@@ -411,15 +443,30 @@ function collectNewSiteDetails() {
       '<div class="col-md-12"> ' +
       '<form class="form-horizontal"> ' +
       '<div class="form-group"> ' +
-      '<label class="col-md-3 control-label" for="name">Project name</label> ' +
+      '<label class="col-md-3 control-label" for="project_name">Project name</label> ' +
       '<div class="col-md-9"> ' +
       '<input id="project_name" name="project_name" type="text" placeholder="" class="form-control input-md"> ' +
       '</div> ' +
       '</div> ' +
       '<div class="form-group"> ' +
-      '<label class="col-md-3 control-label" for="name">Git URL</label> ' +
+      '<label class="col-md-3 control-label" for="project_git_url">Git URL</label> ' +
       '<div class="col-md-9"> ' +
       '<input id="project_git_url" name="project_git_url" type="text" placeholder="" class="form-control input-md"> ' +
+      '</div> ' +
+      '</div> ' +
+      '<div class="form-group"> ' +
+      '<label class="col-md-3 control-label" for="awesomeness">Composer</label> ' +
+      '<div class="col-md-4"> <div class="radio"> <label for="awesomeness-0"> ' +
+      '<input type="radio" name="project_composer" id="composer-0" value="false" checked="checked"> ' +
+      'No </label> ' +
+      '</div><div class="radio"> <label for="composer-1"> ' +
+      '<input type="radio" name="project_composer" id="composer-1" value="true"> Yes </label> ' +
+      '</div> ' +
+      '</div> </div>' +
+      '<div class="form-group"> ' +
+      '<label class="col-md-3 control-label" for="project_webroot">Webroot </label> ' +
+      '<div class="col-md-9"> ' +
+      '<input id="project_webroot" name="project_webroot" type="text" placeholder="" class="form-control input-md"> ' +
       '</div> ' +
       '</div> ' +
       '</form> </div>  </div>',
@@ -428,9 +475,11 @@ function collectNewSiteDetails() {
         label: "Create",
         className: "btn-primary",
         callback: function () {
-          var project_name = $('#project_name').val();
-          var project_git_url = $('#project_git_url').val();
-          createNewSite(project_name.toLowerCase(), project_git_url);
+          var name = $('#project_name').val();
+          var git_url = $('#project_git_url').val();
+          var composer = $("input[name='project_composer']:checked").val()
+          var webroot = $('#project_webroot').val();
+          createNewSite(name.toLowerCase(), git_url, composer, webroot);
         }
       }
     }
@@ -438,56 +487,32 @@ function collectNewSiteDetails() {
 }
 
 
-function createNewSite(projectName, projectGitUrl) {
+function createNewSite(name, gitUrl, composer, webroot) {
   // Create the directory
   var fs = require('fs');
-  var dir = drupalvm_config.vagrant_synced_folders[0].local_path + "/" + projectName;
-
-  if (!fs.existsSync(dir)){
-      fs.mkdirSync(dir);
-  }
+  var dir = drupalvm_config.vagrant_synced_folders[0].local_path + "/" + name;
 
   // Perform a git init
-  if(projectGitUrl) {
-    var spawn = require('child_process').spawn;
-    var child = spawn('git',
-      ['clone', projectGitUrl, dir]);
-
-    var stdout = '';
-    child.stdout.on('data',
-      function (buf) {
-          stdout += buf;
-      }
-    );
-
-    child.on('exit', function (exitCode) {
-      // Search for the status
-      if(stdout.indexOf("poweroff") > -1) {
-        $('#drupalvm_start').removeClass('disabled');
-        $('#drupalvm_stop').addClass('disabled');
-        $('.drupalVMHeaderStatus').text("Stopped");
-        drupalvm_running = false;
-      }
-      else {
-        $('#drupalvm_start').addClass('disabled');
-        $('#drupalvm_stop').removeClass('disabled');
-        $('.drupalVMHeaderStatus').text("Running");
-        drupalvm_running = true;
-      }
-      bootbox.hideAll();
-    });
+  if(gitUrl) {
+    createSiteGit(dir, gitUrl, composer);
   }
+  else {
+    if (!fs.existsSync(dir)){
+        fs.mkdirSync(dir);
+    }
+  }
+
   // Create the apache vhost
   var newSite = new Object();
-  newSite.servername = projectName + "." + drupalvm_config.vagrant_hostname;
-  newSite.documentroot = "/var/www/" + projectName;
+  newSite.servername = name + "." + drupalvm_config.vagrant_hostname;
+  newSite.projectroot = "/var/www/" + name;
+  newSite.documentroot = "/var/www/" + name + "/" + webroot;
   drupalvm_config.apache_vhosts.push(newSite);
 
-  //TODO: nginx?
 
-  //TODO: Create the database
+  // Create the database
   var newDatabase = new Object();
-  newDatabase.name = projectName;
+  newDatabase.name = name;
   newDatabase.encoding = "utf8";
   newDatabase.collation = "utf8_general_ci";
   drupalvm_config.mysql_databases.push(newDatabase);
@@ -495,6 +520,60 @@ function createNewSite(projectName, projectGitUrl) {
   saveConfigFile();
 
   drupalvmBuildSitesList();
+}
+
+function createSiteGit(dir, projectGitUrl, composer){
+  drupalVMProcessing("Cloning from git ...");
+  var spawn = require('child_process').spawn;
+  var child = spawn('git',
+    ['clone', projectGitUrl, dir]);
+
+  var stdout = '';
+  child.stdout.on('data',
+    function (buf) {
+        stdout += buf;
+    }
+  );
+
+  child.on('exit', function (exitCode) {
+    bootbox.hideAll();
+    if(composer) {
+        runComposer(dir);
+    }
+  });
+}
+
+
+function runComposer(dir) {
+  drupalVMProcessing("Running composer ...")
+  var spawn = require('child_process').spawn;
+  var child = spawn('composer',
+    [
+      'install',
+      '--working-dir=' + dir,
+      '-n',
+      '-vvv',
+      '--dev'
+    ]);
+
+  child.stdout.on('data',
+    function (buf) {
+      $("#processingLog pre").append(document.createTextNode(buf));
+      $("#processingLog pre").scrollTop($("#processingLog pre")[0].scrollHeight);
+    }
+  );
+
+  child.stderr.on('data',
+    function (buf) {
+      $("#processingLog pre").append(document.createTextNode(buf));
+      $("#processingLog pre").scrollTop($("#processingLog pre")[0].scrollHeight);
+    }
+  );
+
+
+  child.on('exit', function (exitCode) {
+    bootbox.hideAll();
+  });
 }
 
 
