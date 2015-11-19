@@ -6,7 +6,7 @@ __This application is still in heavy active and early development.__
 
 
 ## Early demo video
-[![Demo Video](http://img.youtube.com/vi/Due08SU5cb4/0.jpg)](https://www.youtube.com/watch?v=Due08SU5cb4)
+[![Demo Video](http://img.youtube.com/vi/PuSqHk5zGHQ/0.jpg)](https://www.youtube.com/watch?v=PuSqHk5zGHQ)
 
 
 ## Instructions
