@@ -18,10 +18,9 @@ var DRUPALVM_RELOAD = "reload";
 
 $( document ).ready( function() {
   drupalVMProcessing("Reading configurations ...")
-  checkPrerequisites();
+  checkPrerequisites() ;
   detectDrupalVM();
 });
-
 
 // ------ Event Hookups ------ //
 
@@ -149,7 +148,99 @@ function drupalVMProcessing(modalTitle) {
 
 
 function checkPrerequisites() {
-  // on failure, disable menu items, load status report into dashboard
+  var errors = [];
+
+  require('check-dependencies')().then(function (result) {
+    if (!result.depsWereOk) {
+      errors.push('Unmet npm dependencies. Please run "npm install" in the project directory.');
+      // see result.error array for errors
+    }
+  });
+
+  // TODO: do we want this to be a synchronous process, instead?
+  var exec = require('child_process').exec;
+
+  // software dependencies
+  var dependencies = [
+    // vagrant
+    {
+      name: 'Vagrant',
+      command: 'vagrant --version',
+      regex: /Vagrant (\d+\.\d+\.\d+)/i,
+      version: '1.7.4'
+    },
+    // ansible
+    {
+      name: 'Ansible',
+      command: 'ansible --version',
+      regex: /ansible (\d+\.\d+\.\d+)/i,
+      version: '1.9.4'
+    },
+    // virtualbox
+    {
+      name: 'VirtualBox',
+      command: 'vboxmanage --version',
+      regex: /(\d+\.\d+\.\d+)/i,
+      version: '5.0.10'
+    }
+  ];
+
+  // promise-based loop
+  check_dependency(dependencies.shift());
+  function check_dependency(item) {
+    var common_callback = function () {
+      if (dependencies.length) {
+        check_dependency(dependencies.shift());
+      }
+
+      if (errors.length) {
+        console.log('Errors:');
+
+        for (var i in errors) {
+          console.log(errors[i]);
+        }
+      }
+    };
+
+    new Promise(function(resolve, reject) {
+      exec(item.command, [], function (error, stdout, stderr) {
+        if (error !== null) {
+          var os = require('os');
+
+          var error_text = [
+            'Could not find ' + item.name + '; ensure it is installed and available in PATH.',
+            '\tTried to execute: ' + item.command,
+            '\tGot error: ' + stderr
+          ];
+
+          errors.push(error_text.join(os.EOL));
+          
+          reject();
+          return;
+        }
+
+        if (item.regex) {
+          var matches = stdout.match(item.regex);
+          if (matches) {
+            var cv = require('compare-version');
+
+            // >= 0 is all good
+            if (cv(matches[1], item.version) < 0) {
+              errors.push(item.name + ' was found, but a newer version is required. Please upgrade ' + item.name + ' to version ' + item.version + ' or higher.');
+            }
+          }
+          else {
+            errors.push(item.name + ' was found, but the version could not be determined.');
+          }
+        }
+
+        resolve();
+      });
+
+    }).then(common_callback, common_callback);
+  }
+
+  // on failure, disable menu dependencies, load status report into dashboard
 }
 
 
