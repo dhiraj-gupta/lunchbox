@@ -169,6 +169,13 @@ function checkPrerequisites() {
       regex: /Vagrant (\d+\.\d+\.\d+)/i,
       version: '1.7.4'
     },
+    // vagrant vb-guest plugin
+    {
+      name: 'Vagrant VBGuest Plugin',
+      command: 'vagrant plugin list',
+      regex: /vagrant-vbguest \((\d+\.\d+\.\d+)\)/i,
+      version: '0.11.0'
+    },
     // ansible
     {
       name: 'Ansible',
