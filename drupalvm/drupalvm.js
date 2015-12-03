@@ -18,7 +18,15 @@ var DRUPALVM_RELOAD = "reload";
 
 $( document ).ready( function() {
   drupalVMProcessing("Reading configurations ...")
-  checkPrerequisites() ;
+
+  checkPrerequisites().then(function(result) {
+    console.log('PREREQ: got success');
+    console.log(result);
+  }, function (error) {
+    console.log('PREREQ: got error');
+    console.log(error);
+  });
+
   detectDrupalVM();
 });
 
@@ -148,108 +156,95 @@ function drupalVMProcessing(modalTitle) {
 
 
 function checkPrerequisites() {
-  var errors = [];
+  var Q = require('q');
 
+  var promises = [];
+
+  // npm dependencies
+  var npm_deferred = Q.defer();
   require('check-dependencies')().then(function (result) {
     if (!result.depsWereOk) {
-      errors.push('Unmet npm dependencies. Please run "npm install" in the project directory.');
-      // see result.error array for errors
+      npm_deferred.reject('Unmet npm dependencies. Please run "npm install" in the project directory.');
+      return;
     }
-  });
 
-  // TODO: do we want this to be a synchronous process, instead?
-  var exec = require('child_process').exec;
+    npm_deferred.resolve(null);
+  });
+  promises.push(npm_deferred.promise);
 
   // software dependencies
-  var dependencies = [
+  var dependencies = [{
     // vagrant
-    {
-      name: 'Vagrant',
-      command: 'vagrant --version',
-      regex: /Vagrant (\d+\.\d+\.\d+)/i,
-      version: '1.7.4'
-    },
-    // vagrant vb-guest plugin
-    {
-      name: 'Vagrant VBGuest Plugin',
-      command: 'vagrant plugin list',
-      regex: /vagrant-vbguest \((\d+\.\d+\.\d+)\)/i,
-      version: '0.11.0'
-    },
+    name: 'Vagrant',
+    command: 'vagrant --version',
+    regex: /Vagrant (\d+\.\d+\.\d+)/i,
+    version: '1.7.4'
+  }, {
+    // vagrant vbguest plugin
+    name: 'Vagrant VBGuest Plugin',
+    command: 'vagrant plugin list',
+    regex: /vagrant-vbguest \((\d+\.\d+\.\d+)\)/i,
+    version: '0.11.0'
+  }, {
     // ansible
-    {
-      name: 'Ansible',
-      command: 'ansible --version',
-      regex: /ansible (\d+\.\d+\.\d+)/i,
-      version: '1.9.4'
-    },
+    name: 'Ansible',
+    command: 'ansible --version',
+    regex: /ansible (\d+\.\d+\.\d+)/i,
+    version: '1.9.4'
+  }, {
     // virtualbox
-    {
-      name: 'VirtualBox',
-      command: 'vboxmanage --version',
-      regex: /(\d+\.\d+\.\d+)/i,
-      version: '5.0.10'
-    }
-  ];
+    name: 'VirtualBox',
+    command: 'vboxmanage --version',
+    regex: /(\d+\.\d+\.\d+)/i,
+    version: '5.0.10'
+  }];
 
-  // promise-based loop
-  check_dependency(dependencies.shift());
-  function check_dependency(item) {
-    var common_callback = function () {
-      if (dependencies.length) {
-        check_dependency(dependencies.shift());
+  var exec = require('child_process').exec;
+  var dep_promises = [];
+
+  dependencies.forEach(function(item) {
+    var deferred = Q.defer();
+    
+    exec(item.command, [], function (error, stdout, stderr) {
+      if (error !== null) {
+        var os = require('os');
+
+        var error_text = [
+          'Could not find ' + item.name + '; ensure it is installed and available in PATH.',
+          '\tTried to execute: ' + item.command,
+          '\tGot error: ' + stderr
+        ];
+
+        deferred.reject(error_text.join(os.EOL));
+
+        return;
       }
 
-      if (errors.length) {
-        console.log('Errors:');
+      if (item.regex) {
+        var matches = stdout.match(item.regex);
+        if (matches) {
+          var cv = require('compare-version');
 
-        for (var i in errors) {
-          console.log(errors[i]);
+          // >= 0 is all good
+          if (cv(matches[1], item.version) < 0) {
+            errors.push(item.name + ' was found, but a newer version is required. Please upgrade ' + item.name + ' to version ' + item.version + ' or higher.');
+          }
+
+          item.found_version = matches[1];
+        }
+        else {
+          errors.push(item.name + ' was found, but the version could not be determined.');
         }
       }
-    };
 
-    new Promise(function(resolve, reject) {
-      exec(item.command, [], function (error, stdout, stderr) {
-        if (error !== null) {
-          var os = require('os');
+      deferred.resolve(item);
+    });
 
-          var error_text = [
-            'Could not find ' + item.name + '; ensure it is installed and available in PATH.',
-            '\tTried to execute: ' + item.command,
-            '\tGot error: ' + stderr
-          ];
+    promises.push(deferred.promise);
+  });
 
-          errors.push(error_text.join(os.EOL));
-          
-          reject();
-          return;
-        }
-
-        if (item.regex) {
-          var matches = stdout.match(item.regex);
-          if (matches) {
-            var cv = require('compare-version');
-
-            // >= 0 is all good
-            if (cv(matches[1], item.version) < 0) {
-              errors.push(item.name + ' was found, but a newer version is required. Please upgrade ' + item.name + ' to version ' + item.version + ' or higher.');
-            }
-          }
-          else {
-            errors.push(item.name + ' was found, but the version could not be determined.');
-          }
-        }
-
-        resolve();
-      });
-
-    }).then(common_callback, common_callback);
-  }
-
-  // on failure, disable menu dependencies, load status report into dashboard
+  return Q.all(promises);
 }
-
 
 function detectDrupalVM() {
   var spawn = require('child_process').spawn;
