@@ -14,7 +14,7 @@
       // bootbox element is assigned to this var in create()
       var dialog = {};
 
-      // settings/configuration object
+      // default settings/configuration object
       var settings = {
         auto_scroll: false
       };
@@ -104,9 +104,9 @@
          * @param  {[type]} content [description]
          */
         append: function (content, type) {
+          // support for data straight from Buffer
           if (content instanceof Buffer) {
             content = content.toString('utf8');
-            // content = document.createTextNode(content);
           }
 
           if (typeof type == 'undefined') {

@@ -56,7 +56,7 @@ app.on('ready', function() {
     mainWindow = null;
   });
 
-  // allow local config access to mainWindow
+  // allow local config access to mainWindow via custom event bindings
   var fs = require('fs');
   var config_path = './drupalvm/local_config.js';
   fs.exists(config_path, function (exists) {
