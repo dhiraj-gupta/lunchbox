@@ -1,10 +1,19 @@
 
-#processingLog pre{
+#processingLog pre, pre.processingLog {
   color: #cdcdcd;
   background-color: #fff;
   border: none;
-  height: 200px;
+  height: 340px;
 }
+
+  .processingLog .error {
+    color: #c80f0f;
+  }
+
+  .processingLog .warning {
+    color: #e49701;
+  }
+
 
 #menu_drupalvm_dashboard a {
   padding-top: 25px;
@@ -37,8 +46,16 @@
   margin-left: 10px;
 }
 
+.modal-dialog {
+  width: 900px;
+}
+
+  .modal-dialog .modal-content {
+    height: 500px;
+  }
+
 .modal-backdrop {
-    background-color: #ccc
+  background-color: #ccc
 }
 
 .modal-backdrop.in {

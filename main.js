@@ -13,7 +13,6 @@ require('crash-reporter').start();
 // Quit when all windows are closed.
 app.on('window-all-closed', function() {
   if (process.platform != 'darwin') {
-    console.log('Exiting.');
     app.quit();
   }
 });
@@ -40,19 +39,13 @@ if (shouldQuit) {
 app.on('ready', function() {
   mainWindow = new BrowserWindow({
     width: 1000,
-    height: 600
+    height: 600,
+    center: true
   });
 
   mainWindow.loadUrl('file://' + __dirname + '/drupalvm/index.html');
 
   mainWindow.setMenuBarVisibility(false);
-
-  // Open the DevTools.
-  /*
-  mainWindow.webContents.openDevTools({
-    detach: true
-  });
-  */
 
   // Emitted when the window is closed.
   mainWindow.on('closed', function () {
@@ -61,5 +54,15 @@ app.on('ready', function() {
     // in an array if your app supports multi windows, this is the time
     // when you should delete the corresponding element.
     mainWindow = null;
+  });
+
+  // allow local config access to mainWindow
+  var fs = require('fs');
+  var config_path = './drupalvm/local_config.js';
+  fs.exists(config_path, function (exists) {
+    if (exists) {
+      var trigger = require(config_path);
+      trigger('app', 'ready', [mainWindow]);
+    }
   });
 });
