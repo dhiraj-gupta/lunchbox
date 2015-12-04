@@ -46,13 +46,6 @@ app.on('ready', function() {
 
   mainWindow.setMenuBarVisibility(false);
 
-  // Open the DevTools.
-  /*
-  mainWindow.webContents.openDevTools({
-    detach: true
-  });
-  */
-
   // Emitted when the window is closed.
   mainWindow.on('closed', function () {
 
@@ -60,5 +53,17 @@ app.on('ready', function() {
     // in an array if your app supports multi windows, this is the time
     // when you should delete the corresponding element.
     mainWindow = null;
+  });
+
+  // allow local config access to mainWindow
+  var fs = require('fs');
+  var config_path = './drupalvm/local_config.js';
+  fs.exists(config_path, function (exists) {
+    if (exists) {
+      var local = require(config_path);
+      if (local.appOnReady) {
+        local.appOnReady(mainWindow);
+      }
+    }
   });
 });
