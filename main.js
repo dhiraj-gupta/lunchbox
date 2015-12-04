@@ -38,8 +38,8 @@ if (shouldQuit) {
 
 app.on('ready', function() {
   mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 1200
+    width: 1000,
+    height: 600
   });
 
   mainWindow.loadUrl('file://' + __dirname + '/drupalvm/index.html');
@@ -47,9 +47,11 @@ app.on('ready', function() {
   mainWindow.setMenuBarVisibility(false);
 
   // Open the DevTools.
+  /*
   mainWindow.webContents.openDevTools({
     detach: true
   });
+  */
 
   // Emitted when the window is closed.
   mainWindow.on('closed', function () {
