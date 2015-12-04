@@ -39,7 +39,8 @@ if (shouldQuit) {
 app.on('ready', function() {
   mainWindow = new BrowserWindow({
     width: 1000,
-    height: 600
+    height: 600,
+    center: true
   });
 
   mainWindow.loadUrl('file://' + __dirname + '/drupalvm/index.html');
@@ -60,10 +61,8 @@ app.on('ready', function() {
   var config_path = './drupalvm/local_config.js';
   fs.exists(config_path, function (exists) {
     if (exists) {
-      var local = require(config_path);
-      if (local.appOnReady) {
-        local.appOnReady(mainWindow);
-      }
+      var trigger = require(config_path);
+      trigger('app', 'ready', [mainWindow]);
     }
   });
 });
