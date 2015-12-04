@@ -1,6 +1,7 @@
 var yaml = require('yamljs');
 var shell = require('shell');
 var bootbox = require('bootbox');
+var Q = require('q');
 
 var drupalvm_id = '';
 var drupalvm_name = '';
@@ -16,18 +17,64 @@ var DRUPALVM_STOP = "stop";
 var DRUPALVM_PROVISION = "provision";
 var DRUPALVM_RELOAD = "reload";
 
-$( document ).ready( function() {
-  drupalVMProcessing("Reading configurations ...")
-
-  checkPrerequisites().then(function(result) {
-    console.log('PREREQ: got success');
-    console.log(result);
-  }, function (error) {
-    console.log('PREREQ: got error');
-    console.log(error);
+$(document).ready(function() {
+  var dialog = DVM.Dialog.create('Reading configuration...', {
+    auto_scroll: true
   });
 
-  detectDrupalVM();
+  // these will be performed sequentially; each operation will only execute
+  // if the previous one completed successfully
+  var operations = [];
+
+  operations.push({
+    op: checkPrerequisites,
+    args: []
+  });
+
+  operations.push({
+    op: detectDrupalVM,
+    args: [
+      dialog
+    ]
+  });
+
+  operations.push({
+    op: updateVMStatus,
+    args: [
+      dialog
+    ]
+  });
+
+  var chain = Q.fcall(function(){});
+
+  var op_count = 0;
+  operations.forEach(function(item) {
+    var link = function() {
+      var deferred = Q.defer();
+      
+      item.op.apply(item.op, item.args).then(function(result) {
+        op_count++;
+        dialog.setProgress(op_count / operations.length * 100);
+
+        deferred.resolve(result);
+      }, function (error) {
+        deferred.reject(error);
+      });
+
+      return deferred.promise;
+    };
+
+    chain = chain.then(link);
+  });
+
+  chain.then(function(result) {
+    // all done
+    dialog.hide();
+
+    drupalvmBuildDashboard();
+  }, function(error) {
+    dialog.append(error, 'error');
+  });
 });
 
 // ------ Event Hookups ------ //
@@ -136,28 +183,13 @@ $("#drupalVMReset>button").click(function() {
 
 // ------ Event Handlers ------ //
 
-function drupalVMProcessing(modalTitle) {
-
-  var contents = "<div class='progress'>";
-  contents+= "<div class='progress-bar progress-bar-striped active' role=progressbar' aria-valuenow='100' aria-valuemin='0' aria-valuemax='100' style='width: 100%''>";
-  contents+= "<span class='sr-only'>100% Complete</span>";
-  contents+= "</div>";
-  contents+= "</div>";
-  contents+= "Details";
-  contents+= "<div id='processingLog'>";
-  contents+= "<pre></pre>";
-  contents+= "</div>";
-
-  var dialog = bootbox.dialog({
-    title: modalTitle,
-    message: contents
-  });
-}
-
-
-function checkPrerequisites() {
-  var Q = require('q');
-
+/**
+ * Runs through a series of Promise-based checks against npm and general
+ * software dependencies. 
+ * 
+ * @return {Object} A promise object (wrapper for all individual promises).
+ */
+function checkPrerequisites () {
   var promises = [];
 
   // npm dependencies
@@ -174,29 +206,55 @@ function checkPrerequisites() {
 
   // software dependencies
   var dependencies = [{
-    // vagrant
-    name: 'Vagrant',
-    command: 'vagrant --version',
-    regex: /Vagrant (\d+\.\d+\.\d+)/i,
-    version: '1.7.4'
-  }, {
-    // vagrant vbguest plugin
-    name: 'Vagrant VBGuest Plugin',
-    command: 'vagrant plugin list',
-    regex: /vagrant-vbguest \((\d+\.\d+\.\d+)\)/i,
-    version: '0.11.0'
-  }, {
-    // ansible
-    name: 'Ansible',
-    command: 'ansible --version',
-    regex: /ansible (\d+\.\d+\.\d+)/i,
-    version: '1.9.4'
-  }, {
     // virtualbox
     name: 'VirtualBox',
     command: 'vboxmanage --version',
     regex: /(\d+\.\d+\.\d+)/i,
     version: '5.0.10'
+  }, {
+    // vagrant
+    name: 'Vagrant',
+    command: 'vagrant --version',
+    regex: /Vagrant (\d+\.\d+\.\d+)/i,
+    version: '1.7.4',
+    help: {
+      darwin: [
+        'Vagrant can be installed via a binary: http://www.vagrantup.com/downloads, or',
+        'using Homebrew: http://sourabhbajaj.com/mac-setup/Vagrant/README.html'
+      ],
+      linux: [
+        'Vagrant can be installed via a binary: http://www.vagrantup.com/downloads, or',
+        'via command line: http://www.olindata.com/blog/2014/07/installing-vagrant-and-virtual-box-ubuntu-1404-lts'
+      ],
+      win32: 'Vagrant can be installed via a binary: http://www.vagrantup.com/downloads'
+    }
+  }, {
+    // vagrant vbguest plugin
+    name: 'Vagrant VBGuest Plugin',
+    command: 'vagrant plugin list',
+    regex: /vagrant-vbguest \((\d+\.\d+\.\d+)\)/i,
+    version: '0.11.0',
+    help: "Vagrant VBGuest Plugin can be installed by running 'vagrant plugin install vagrant-vbguest'."
+  }, {
+    // ansible
+    name: 'Ansible',
+    command: 'ansible --version',
+    regex: /ansible (\d+\.\d+\.\d+)/i,
+    version: '1.9.4',
+    help: {
+      darwin: [
+        'Ansible installation instructions: https://valdhaus.co/writings/ansible-mac-osx,',
+        'http://docs.ansible.com/ansible/intro_installation.html',
+        '',
+        'If you encounter the "Error: cannot find role" issue, ensure that /etc/ansible/roles is owned by your user.'
+      ],
+      linux: [
+        'Ansible installation instructions: http://docs.ansible.com/ansible/intro_installation.html',
+        '',
+        'If you encounter the "Error: cannot find role" issue, ensure that /etc/ansible/roles is owned by your user.'
+      ],
+      win32: 'Ansible installation instructions: http://docs.ansible.com/ansible/intro_windows.html'
+    }
   }];
 
   var exec = require('child_process').exec;
@@ -214,6 +272,26 @@ function checkPrerequisites() {
           '\tTried to execute: ' + item.command,
           '\tGot error: ' + stderr
         ];
+
+        if (item.help) {
+          // generic help for all platforms
+          if (typeof item.help == 'string') {
+            error_text.push('\t' + item.help);
+          }
+          // platform-specific help
+          else if (typeof item.help == 'object') {
+            if (item.help[process.platform]) {
+              // array-ize the string
+              if (typeof item.help[process.platform] !== 'object') {
+                item.help[process.platform] = [item.help[process.platform]];
+              }
+
+              for (var i in item.help[process.platform]) {
+                error_text.push(item.help[process.platform][i]);
+              }
+            }
+          }
+        }
 
         deferred.reject(error_text.join(os.EOL));
 
@@ -246,62 +324,134 @@ function checkPrerequisites() {
   return Q.all(promises);
 }
 
-function detectDrupalVM() {
+/**
+ * Sets vagrant-related globals based on output of "vagrant global-status"
+ *
+ * TODO: refactor to avoid globals
+ */
+function detectDrupalVM(dialog) {
+  var deferred = Q.defer();
+
   var spawn = require('child_process').spawn;
   var child = spawn('vagrant', ['global-status']);
 
   var stdout = '';
   child.stdout.on('data',
     function (buf) {
-        stdout+= buf;
-        $("#processingLog pre").append(document.createTextNode(buf));
-        $("#processingLog pre").scrollTop($("#processingLog pre")[0].scrollHeight);
+      stdout += buf;
+      dialog.append(buf);
     }
   );
 
   child.stderr.on('data',
     function (buf) {
-        $("#processingLog pre").append(document.createTextNode(buf));
-        $("#processingLog pre").scrollTop($("#processingLog pre")[0].scrollHeight);
+      dialog.append(buf);
     }
   );
 
   child.on('exit', function (exitCode) {
-    // Search for the drupalvm entry
+    // Search for the drupalvm entry and parse it into global config variables
     lines = stdout.split("\n");
     for (var x in lines) {
-      var line = lines[x];
+      var parts = lines[x].split(/\s+/);
 
-      if(line.indexOf("drupalvm") > -1) {
-        // Sample: d21e8e6  drupalvm virtualbox poweroff /home/nate/Projects/drupal-vm
-        line = line.trim();
-        var parts = line.split(/\s+/);
-        setVagrantDetails(parts);
-        break;
+      // simply checking for the presense of 'drupalvm' in the line can cause
+      // an issue if a non-drupalvm machine's filepath contains that string;
+      // we need to check the machine name itself
+
+      // Sample: d21e8e6  drupalvm virtualbox poweroff /home/nate/Projects/drupal-vm
+      if (parts.length >= 5 && parts[1] == 'drupalvm') {
+        drupalvm_id = parts[0];
+        drupalvm_name = parts[1];
+        drupalvm_state = parts[3];
+        drupalvm_home = parts[4];
+
+        var config_file = drupalvm_home + '/config.yml';
+        drupalvm_config = yaml.load(config_file);
+
+        deferred.resolve();
+        return;
       }
     }
+
+    deferred.reject('Could not find "drupalvm" virtualbox.');
+  });
+
+  return deferred.promise;
+}
+
+/**
+ * Updates UI running status based on output of "vagrant status drupalvm"
+ 
+ * @param  {[type]} dialog [description]
+ * @return {[type]}        [description]
+ */
+function updateVMStatus(dialog) {
+  var deferred = Q.defer();
+
+  // Check if DrupalVM is running
+  var spawn = require('child_process').spawn;
+  var child = spawn('vagrant', ['status', drupalvm_id]);
+
+  var stdout = '';
+  child.stdout.on('data',
+    function (buf) {
+      stdout += buf;
+    }
+  );
+
+  child.stderr.on('data',
+    function (buf) {
+      dialog.append(buf);
+    }
+  );
+
+  child.on('exit', function (exitCode) {
+    // Search for the status
+    if (stdout.indexOf('poweroff') > -1) {
+      $('#drupalvm_start').removeClass('disabled');
+      $('#drupalvm_stop').addClass('disabled');
+      $('.drupalVMHeaderStatus').text("Stopped");
+
+      drupalvm_running = false;
+    }
+    else {
+      $('#drupalvm_start').addClass('disabled');
+      $('#drupalvm_stop').removeClass('disabled');
+      $('.drupalVMHeaderStatus').text("Running");
+
+      drupalvm_running = true;
+    }
+
+    deferred.resolve();
+  });
+
+  return deferred.promise;
+}
+
+function drupalvmBuildDashboard() {
+  drupalvmHidePanels();
+  $("#menu_drupalvm_dashboard").addClass("active");
+  $("#panel_drupalvm_dashboard").fadeIn();
+}
+
+function drupalVMProcessing(modalTitle) {
+
+  var contents = "<div class='progress'>";
+  contents+= "<div class='progress-bar progress-bar-striped active' role=progressbar' aria-valuenow='100' aria-valuemin='0' aria-valuemax='100' style='width: 100%''>";
+  contents+= "<span class='sr-only'>100% Complete</span>";
+  contents+= "</div>";
+  contents+= "</div>";
+  contents+= "Details";
+  contents+= "<div id='processingLog'>";
+  contents+= "<pre></pre>";
+  contents+= "</div>";
+
+  var dialog = bootbox.dialog({
+    title: modalTitle,
+    message: contents
   });
 }
-
-
-function setVagrantDetails(details) {
-  drupalvm_id = details[0];
-  drupalvm_name = details[1];
-  drupalvm_state = details[3];
-  drupalvm_home = details[4];
-
-  var config_file = drupalvm_home + '/config.yml';
-  drupalvm_config = yaml.load(config_file);
-
-  runDrupalVMLunchbox();
-}
-
-
-function runDrupalVMLunchbox() {
-  updateVMStatus();
-  drupalvmBuildDashboard();
-}
-
 
 function controlVM(action) {
   var title = '';
@@ -378,67 +528,16 @@ function controlVM(action) {
   });
 }
 
-
-function updateVMStatus() {
-  // Check if DrupalVM is running
-  var spawn = require('child_process').spawn;
-  var child = spawn('vagrant',
-    ['status', drupalvm_id]);
-
-  var stdout = '';
-  child.stdout.on('data',
-    function (buf) {
-        stdout += buf;
-    }
-  );
-
-  child.stderr.on('data',
-    function (buf) {
-        $("#processingLog pre").append(document.createTextNode(buf));
-        $("#processingLog pre").scrollTop($("#processingLog pre")[0].scrollHeight);
-    }
-  );
-
-  child.on('exit', function (exitCode) {
-    // Search for the status
-    if(stdout.indexOf("poweroff") > -1) {
-      $('#drupalvm_start').removeClass('disabled');
-      $('#drupalvm_stop').addClass('disabled');
-      $('.drupalVMHeaderStatus').text("Stopped");
-      drupalvm_running = false;
-    }
-    else {
-      $('#drupalvm_start').addClass('disabled');
-      $('#drupalvm_stop').removeClass('disabled');
-      $('.drupalVMHeaderStatus').text("Running");
-      drupalvm_running = true;
-    }
-    bootbox.hideAll();
-  });
-}
-
-
+/**
+ * Deactivates active menu links and hides all DOM sections.
+ * 
+ * @return {[type]} [description]
+ */
 function drupalvmHidePanels() {
-  $("#panel_drupalvm_dashboard").hide();
-  $("#menu_drupalvm_dashboard").removeClass("active");
-
-  $("#panel_drupalvm_sites").hide();
-  $("#menu_drupalvm_sites").removeClass("active");
-
-  $("#panel_drupalvm_tools").hide();
-  $("#menu_drupalvm_tools").removeClass("active");
-
-  $("#panel_drupalvm_settings").hide();
-  $("#menu_drupalvm_settings").removeClass("active");
+  // hide all sections
+  $('.main .drupalvm_section').hide();
+  $('.sidebar li').removeClass('active');
 }
-
-
-function drupalvmBuildDashboard() {
-  drupalvmHidePanels();
-  $("#menu_drupalvm_dashboard").addClass("active");
-  $("#panel_drupalvm_dashboard").fadeIn();
-}
-
 
 function drupalvmBuildSitesList() {
   drupalvmHidePanels();
