@@ -312,13 +312,13 @@ function checkPrerequisites () {
 
           // >= 0 is all good
           if (cv(matches[1], item.version) < 0) {
-            errors.push(item.name + ' was found, but a newer version is required. Please upgrade ' + item.name + ' to version ' + item.version + ' or higher.');
+            deferred.reject(item.name + ' was found, but a newer version is required. Please upgrade ' + item.name + ' to version ' + item.version + ' or higher.');
           }
 
           item.found_version = matches[1];
         }
         else {
-          errors.push(item.name + ' was found, but the version could not be determined.');
+          deferred.reject(item.name + ' was found, but the version could not be determined.');
         }
       }
 
