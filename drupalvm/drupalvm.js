@@ -236,6 +236,13 @@ function checkPrerequisites () {
     version: '0.11.0',
     help: "Vagrant VBGuest Plugin can be installed by running 'vagrant plugin install vagrant-vbguest'."
   }, {
+    // vagrant hostsupdater  plugin
+    name: 'Vagrant HostsUpdater Plugin',
+    command: 'vagrant plugin list',
+    regex: /vagrant-hostsupdater \((\d+\.\d+\.\d+)\)/i,
+    version: '1.0.1',
+    help: "Vagrant HostsUpdater Plugin can be installed by running 'vagrant plugin install vagrant-hostsupdater'."
+  }, {
     // ansible
     name: 'Ansible',
     command: 'ansible --version',
@@ -276,7 +283,7 @@ function checkPrerequisites () {
         if (item.help) {
           // generic help for all platforms
           if (typeof item.help == 'string') {
-            error_text.push('\t' + item.help);
+            error_text.push(item.help);
           }
           // platform-specific help
           else if (typeof item.help == 'object') {
