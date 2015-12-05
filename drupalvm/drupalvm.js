@@ -2,6 +2,7 @@ var yaml = require('yamljs');
 var shell = require('shell');
 var bootbox = require('bootbox');
 var Q = require('q');
+var os = require('os');
 
 var drupalvm_id = '';
 var drupalvm_name = '';
@@ -17,10 +18,8 @@ var DRUPALVM_STOP = "stop";
 var DRUPALVM_PROVISION = "provision";
 var DRUPALVM_RELOAD = "reload";
 
-$(document).ready(function() {
-  var dialog = DVM.Dialog.create('Reading configuration...', {
-    auto_scroll: true
-  });
+$(document).ready(function () {
+  var dialog = require('./modules/dialog').create('Reading configuration...');
 
   // these will be performed sequentially; each operation will only execute
   // if the previous one completed successfully
@@ -28,7 +27,9 @@ $(document).ready(function() {
 
   operations.push({
     op: checkPrerequisites,
-    args: []
+    args: [
+      dialog
+    ]
   });
 
   operations.push({
@@ -45,14 +46,14 @@ $(document).ready(function() {
     ]
   });
 
-  var chain = Q.fcall(function(){});
+  var chain = Q.fcall(function (){});
 
   var op_count = 0;
-  operations.forEach(function(item) {
-    var link = function() {
+  operations.forEach(function (item) {
+    var link = function () {
       var deferred = Q.defer();
       
-      item.op.apply(item.op, item.args).then(function(result) {
+      item.op.apply(item.op, item.args).then(function (result) {
         op_count++;
         dialog.setProgress(op_count / operations.length * 100);
 
@@ -67,35 +68,33 @@ $(document).ready(function() {
     chain = chain.then(link);
   });
 
-  chain.then(function(result) {
+  chain.then(function (result) {
     // all done
-    dialog.hide();
-
     drupalvmBuildDashboard();
-  }, function(error) {
+  }, function (error) {
     dialog.append(error, 'error');
   });
 });
 
 // ------ Event Hookups ------ //
 
-$("#menu_drupalvm_dashboard").click(function() {
+$("#menu_drupalvm_dashboard").click(function () {
   drupalvmBuildDashboard();
 });
 
-$("#menu_drupalvm_sites").click(function() {
+$("#menu_drupalvm_sites").click(function () {
   drupalvmBuildSitesList();
 });
 
-$("#menu_drupalvm_tools").click(function() {
+$("#menu_drupalvm_tools").click(function () {
   drupalvmBuildTools();
 });
 
-$("#menu_drupalvm_settings").click(function() {
+$("#menu_drupalvm_settings").click(function () {
   drupalvmBuildSettings();
 });
 
-$("#provisionLink").click(function() {
+$("#provisionLink").click(function () {
   if(drupalvm_running) {
     controlVM(DRUPALVM_PROVISION);
   }
@@ -104,17 +103,17 @@ $("#provisionLink").click(function() {
   }
 });
 
-$("#drupalvm_start").click(function() {
+$("#drupalvm_start").click(function () {
   controlVM(DRUPALVM_START);
 });
 
 
-$("#drupalvm_stop").click(function() {
+$("#drupalvm_stop").click(function () {
   controlVM(DRUPALVM_STOP);
 });
 
 
-$("#drupalvm_provision").click(function() {
+$("#drupalvm_provision").click(function () {
   if(drupalvm_running) {
     controlVM(DRUPALVM_PROVISION);
   }
@@ -123,57 +122,57 @@ $("#drupalvm_provision").click(function() {
   }
 });
 
-$("#vagrant_ip").change(function() {
+$("#vagrant_ip").change(function () {
   saveVMSettings("vagrant_ip");
 });
 
-$("#vagrant_hostname").change(function() {
+$("#vagrant_hostname").change(function () {
   saveVMSettings("vagrant_hostname");
 });
 
-$("#vagrant_synced_folders").change(function() {
+$("#vagrant_synced_folders").change(function () {
   saveVMSettings("vagrant_synced_folders");
 });
 
-$("#vagrant_memory").change(function() {
+$("#vagrant_memory").change(function () {
   saveVMSettings("vagrant_memory");
 });
 
-$("#vagrant_cpus").change(function() {
+$("#vagrant_cpus").change(function () {
   saveVMSettings("vagrant_cpus");
 });
 
-$("#drupalvm_settings_filesync_default").click(function() {
+$("#drupalvm_settings_filesync_default").click(function () {
   saveFileSyncType("");
 })
 
-$("#drupalvm_settings_filesync_rsync").click(function() {
+$("#drupalvm_settings_filesync_rsync").click(function () {
   saveFileSyncType("rsync");
 })
 
-$("#drupalvm_settings_filesync_nfs").click(function() {
+$("#drupalvm_settings_filesync_nfs").click(function () {
   saveFileSyncType("nfs");
 })
 
-$("#btnAdminer").click(function() {
+$("#btnAdminer").click(function () {
   shell.openExternal('http://adminer.drupalvm.dev');
 })
 
-$("#btnPimpMyLog").click(function() {
+$("#btnPimpMyLog").click(function () {
   shell.openExternal('http://pimpmylog.drupalvm.dev');
 })
 
-$("#btnXHProf").click(function() {
+$("#btnXHProf").click(function () {
   shell.openExternal('http://xhprof.drupalvm.dev');
 })
 
 
-$("#addSite").click(function() {
+$("#addSite").click(function () {
   collectNewSiteDetails();
 })
 
-$("#drupalVMReset>button").click(function() {
-  bootbox.confirm("Reset all settings?", function(result) {
+$("#drupalVMReset>button").click(function () {
+  bootbox.confirm("Reset all settings?", function (result) {
     if(result) {
       drupalVMResetSettings();
     }
@@ -189,7 +188,7 @@ $("#drupalVMReset>button").click(function() {
  * 
  * @return {Object} A promise object (wrapper for all individual promises).
  */
-function checkPrerequisites () {
+function checkPrerequisites(dialog) {
   var promises = [];
 
   // npm dependencies
@@ -267,13 +266,11 @@ function checkPrerequisites () {
   var exec = require('child_process').exec;
   var dep_promises = [];
 
-  dependencies.forEach(function(item) {
+  dependencies.forEach(function (item) {
     var deferred = Q.defer();
     
     exec(item.command, [], function (error, stdout, stderr) {
       if (error !== null) {
-        var os = require('os');
-
         var error_text = [
           'Could not find ' + item.name + '; ensure it is installed and available in PATH.',
           '\tTried to execute: ' + item.command,
@@ -312,16 +309,17 @@ function checkPrerequisites () {
 
           // >= 0 is all good
           if (cv(matches[1], item.version) < 0) {
-            errors.push(item.name + ' was found, but a newer version is required. Please upgrade ' + item.name + ' to version ' + item.version + ' or higher.');
+            deferred.reject(item.name + ' was found, but a newer version is required. Please upgrade ' + item.name + ' to version ' + item.version + ' or higher.');
           }
 
           item.found_version = matches[1];
         }
         else {
-          errors.push(item.name + ' was found, but the version could not be determined.');
+          deferred.reject(item.name + ' was found, but the version could not be determined.');
         }
       }
 
+      dialog.append(item.name + ' found.' + os.EOL);
       deferred.resolve(item);
     });
 
@@ -343,18 +341,9 @@ function detectDrupalVM(dialog) {
   var child = spawn('vagrant', ['global-status']);
 
   var stdout = '';
-  child.stdout.on('data',
-    function (buf) {
-      stdout += buf;
-      dialog.append(buf);
-    }
-  );
-
-  child.stderr.on('data',
-    function (buf) {
-      dialog.append(buf);
-    }
-  );
+  dialog.logProcess(child, function (output) {
+    stdout += output;
+  });
 
   child.on('exit', function (exitCode) {
     // Search for the drupalvm entry and parse it into global config variables
@@ -401,17 +390,9 @@ function updateVMStatus(dialog) {
   var child = spawn('vagrant', ['status', drupalvm_id]);
 
   var stdout = '';
-  child.stdout.on('data',
-    function (buf) {
-      stdout += buf;
-    }
-  );
-
-  child.stderr.on('data',
-    function (buf) {
-      dialog.append(buf);
-    }
-  );
+  dialog.logProcess(child, function (output) {
+    stdout += output;
+  });
 
   child.on('exit', function (exitCode) {
     // Search for the status
@@ -431,6 +412,8 @@ function updateVMStatus(dialog) {
     }
 
     deferred.resolve();
+    dialog.setProgress(100);
+    dialog.hide();
   });
 
   return deferred.promise;
@@ -480,56 +463,38 @@ function controlVM(action) {
       title = 'Re-provisioning VM';
       break;
 
-      case DRUPALVM_RELOAD:
-        cmd = 'reload';
-        title = 'Reloading VM';
-        break;
+    case DRUPALVM_RELOAD:
+      cmd = 'reload';
+      title = 'Reloading VM';
+      break;
   }
 
-  drupalVMProcessing(title);
-
-  $("#processingLog pre").text("");
-
   var spawn = require('child_process').spawn;
-  var child = spawn('vagrant',
-    [cmd, drupalvm_id]);
+  var child = spawn('vagrant', [cmd, drupalvm_id]);
 
-  child.stdout.on('data',
-    function (buf) {
-      $("#processingLog pre").append(document.createTextNode(buf));
-      $("#processingLog pre").scrollTop($("#processingLog pre")[0].scrollHeight);
-    }
-  );
-
-  child.stderr.on('data',
-    function (buf) {
-        $("#processingLog pre").append(document.createTextNode(buf));
-        $("#processingLog pre").scrollTop($("#processingLog pre")[0].scrollHeight);
-    }
-  );
+  var dialog = require('./modules/dialog').create(title);
+  dialog.logProcess(child);
 
   child.on('exit', function (exitCode) {
     switch(action) {
       case DRUPALVM_START:
-        if(drupalvm_needsprovision) {
-          bootbox.hideAll();
+        if (drupalvm_needsprovision) {
           controlVM(DRUPALVM_PROVISION);
         }
         else {
-          updateVMStatus();
+          updateVMStatus(dialog);
         }
         break;
 
       case DRUPALVM_STOP:
       case DRUPALVM_RELOAD:
-        updateVMStatus();
+        updateVMStatus(dialog);
         break;
 
       case DRUPALVM_PROVISION:
         drupalvm_needsprovision = false;
         $("#reprovisionAlert").hide("fast");
-        bootbox.hideAll();
-        updateVMStatus();
+        updateVMStatus(dialog);
         break;
     }
   });
@@ -572,13 +537,11 @@ function drupalvmBuildSitesList() {
   $("#panel_drupalvm_sites").fadeIn();
 }
 
-
 function drupalvmBuildTools() {
   drupalvmHidePanels();
   $("#menu_drupalvm_tools").addClass("active");
   $("#panel_drupalvm_tools").fadeIn();
 }
-
 
 function renderSitesRow(servername) {
   var name = servername.split(".")[0];
@@ -589,7 +552,7 @@ function renderSitesRow(servername) {
   link.attr('href', '#');
   link.html(servername);
   td_dns.append(link);
-  link.click(function() {
+  link.click(function () {
     shell.openExternal("http://" + servername);
   })
   row.append(td_dns);
@@ -601,13 +564,13 @@ function renderSitesRow(servername) {
 
   var td_actions = $('<td class="drupalvm_sites_icons">');
   var button_github = $("<a href='#'><i class='fa fa-2 fa-git'></i></a>");
-  button_github.click(function(){
+  button_github.click(function (){
     shell.openExternal('https://github.com/');
   });
   td_actions.append(button_github);
 
   var button_install = $("<a href='#'><i class='fa fa-2 fa-arrow-down'></i></a>");
-  button_install.click(function(){
+  button_install.click(function (){
     alert("When implemented, this button will invoke a 'composer install' to set up the docroot for the project.")
   });
   td_actions.append(button_install);
@@ -618,13 +581,13 @@ function renderSitesRow(servername) {
   var td_edit = $('<td class="drupalvm_sites_icons">');
 
   var button_edit = $('<a href="#"><i class="fa fa-2 fa-pencil"></i></a>');
-  button_edit.click(function(){
+  button_edit.click(function (){
     alert("When implemented, this button will allow you to edit this site entry.")
   });
   td_edit.append(button_edit);
 
   var button_delete = $('<a href="#"><i class="fa fa-2 fa-ban"></i></a>');
-  button_delete.click(function(){
+  button_delete.click(function (){
     promptDeleteDetails(name);
   });
   td_edit.append(button_delete);
@@ -633,7 +596,6 @@ function renderSitesRow(servername) {
 
   return row;
 }
-
 
 function collectNewSiteDetails() {
   bootbox.dialog({
@@ -728,23 +690,21 @@ function createSiteGit(dir, projectGitUrl, composer){
     ['clone', projectGitUrl, dir]);
 
   var stdout = '';
-  child.stdout.on('data',
-    function (buf) {
-        stdout += buf;
-    }
-  );
+  var dialog = require('./modules/dialog').create(title);
+  dialog.logProcess(child, function (output) {
+    stdout += output;
+  });
 
   child.on('exit', function (exitCode) {
-    bootbox.hideAll();
-    if(composer) {
-        runComposer(dir);
+    dialog.hide();
+
+    if (composer) {
+      runComposer(dir);
     }
   });
 }
 
-
 function runComposer(dir) {
-  drupalVMProcessing("Running composer ...")
   var spawn = require('child_process').spawn;
   var child = spawn('composer',
     [
@@ -755,26 +715,9 @@ function runComposer(dir) {
       '--dev'
     ]);
 
-  child.stdout.on('data',
-    function (buf) {
-      $("#processingLog pre").append(document.createTextNode(buf));
-      $("#processingLog pre").scrollTop($("#processingLog pre")[0].scrollHeight);
-    }
-  );
-
-  child.stderr.on('data',
-    function (buf) {
-      $("#processingLog pre").append(document.createTextNode(buf));
-      $("#processingLog pre").scrollTop($("#processingLog pre")[0].scrollHeight);
-    }
-  );
-
-
-  child.on('exit', function (exitCode) {
-    bootbox.hideAll();
-  });
+  var dialog = require('./modules/dialog').create('Running composer...');
+  dialog.logProcess(child);
 }
-
 
 function promptDeleteDetails(projectName) {
   //TODO: Prompt to ask how much of the record to delete
@@ -796,7 +739,7 @@ function promptDeleteDetails(projectName) {
       success: {
         label: "Cancel",
         className: "btn-default",
-        callback: function() {
+        callback: function () {
           // Do nothing.
         }
       },
@@ -923,7 +866,7 @@ function saveFileSyncType(file_sync_type) {
 function saveConfigFile() {
   yamlString = YAML.stringify(drupalvm_config, 2);
   var fs = require('fs');
-  fs.writeFile(drupalvm_home + '/config.yml', yamlString, function(err) {
+  fs.writeFile(drupalvm_home + '/config.yml', yamlString, function (err) {
       if(err) {
           return console.log(err);
       }
