@@ -11,7 +11,8 @@ var dialog = (function() {
 
   // default settings/configuration object
   var settings = {
-    auto_scroll: false
+    auto_scroll: true,
+    hide_after_process: false
   };
 
   /**
@@ -125,6 +126,42 @@ var dialog = (function() {
       if (settings.auto_scroll) {
         log.scrollTop(log.get(0).scrollHeight);
       }
+    },
+
+    /**
+     * Writes buffer output to dialog's log.
+     * 
+     * @param  {[type]} process        [description]
+     * @param  {[type]} outputCallback [description]
+     * @return {[type]}                [description]
+     */
+    logProcess: function (process, outputCallback) {
+      var self = this;
+
+      var promise = new Promise(function (resolve, reject) {
+        var write = function (buffer) {
+          var content = buffer.toString('utf8');
+          
+          if (typeof outputCallback == 'function') {
+            outputCallback(content);
+          }
+
+          self.append(content);
+        };
+
+        process.stdout.on('data', write);
+        process.stderr.on('data', write);
+
+        process.on('exit', function (exitCode) {
+          if (settings.hide_after_process) {
+            self.hide();
+          }
+
+          resolve();
+        });
+      });
+
+      return promise;
     },
 
     /**
