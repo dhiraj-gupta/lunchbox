@@ -18,7 +18,7 @@ var DRUPALVM_PROVISION = "provision";
 var DRUPALVM_RELOAD = "reload";
 
 $(document).ready(function() {
-  var dialog = DVM.Dialog.create('Reading configuration...', {
+  var dialog = require('./modules/dialog').create('Reading configuration...', {
     auto_scroll: true
   });
 

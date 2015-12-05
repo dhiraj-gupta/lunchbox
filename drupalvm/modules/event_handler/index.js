@@ -50,5 +50,4 @@ var event_handler = (function () {
   };
 })();
 
-module.exports.bind = event_handler.bind;
-module.exports.trigger = event_handler.trigger;
+module.exports = event_handler;
