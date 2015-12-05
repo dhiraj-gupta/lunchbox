@@ -684,13 +684,12 @@ function createNewSite(name, gitUrl, composer, webroot) {
 }
 
 function createSiteGit(dir, projectGitUrl, composer){
-  drupalVMProcessing("Cloning from git ...");
   var spawn = require('child_process').spawn;
   var child = spawn('git',
     ['clone', projectGitUrl, dir]);
 
   var stdout = '';
-  var dialog = require('./modules/dialog').create(title);
+  var dialog = require('./modules/dialog').create('Cloning from git ...');
   dialog.logProcess(child, function (output) {
     stdout += output;
   });
