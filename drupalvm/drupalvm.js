@@ -241,7 +241,10 @@ function checkPrerequisites(dialog) {
     regex: /vagrant-hostsupdater \((\d+\.\d+\.\d+)\)/i,
     version: '1.0.1',
     help: "Vagrant HostsUpdater Plugin can be installed by running 'vagrant plugin install vagrant-hostsupdater'."
-  }, {
+  }];
+  
+  /*
+   {
     // ansible
     name: 'Ansible',
     command: 'ansible --version',
@@ -261,7 +264,8 @@ function checkPrerequisites(dialog) {
       ],
       win32: 'Ansible installation instructions: http://docs.ansible.com/ansible/intro_windows.html'
     }
-  }];
+  }
+  */
 
   var exec = require('child_process').exec;
   var dep_promises = [];
