@@ -189,7 +189,8 @@ $("#drupalVMReset>button").click(function () {
  * @return {Object} A promise object (wrapper for all individual promises).
  */
 function checkPrerequisites(dialog) {
-  var promises = [];
+  // all items added to the chain will be processed sequentially
+  var chain = Q.fcall(function (){});
 
   // npm dependencies
   var npm_deferred = Q.defer();
@@ -201,7 +202,8 @@ function checkPrerequisites(dialog) {
 
     npm_deferred.resolve(null);
   });
-  promises.push(npm_deferred.promise);
+
+  chain = chain.then(npm_deferred.promise);
 
   // software dependencies
   var dependencies = [{
@@ -242,7 +244,7 @@ function checkPrerequisites(dialog) {
     version: '1.0.1',
     help: "Vagrant HostsUpdater Plugin can be installed by running 'vagrant plugin install vagrant-hostsupdater'."
   }];
-  
+
   /*
    {
     // ansible
@@ -268,69 +270,72 @@ function checkPrerequisites(dialog) {
   */
 
   var exec = require('child_process').exec;
-  var dep_promises = [];
 
   dependencies.forEach(function (item) {
-    var deferred = Q.defer();
-    
-    exec(item.command, [], function (error, stdout, stderr) {
-      if (error !== null) {
-        var error_text = [
-          'Could not find ' + item.name + '; ensure it is installed and available in PATH.',
-          '\tTried to execute: ' + item.command,
-          '\tGot error: ' + stderr
-        ];
+    var link = function() {
+      var deferred = Q.defer();
+      
+      exec(item.command, [], function (error, stdout, stderr) {
+        if (error !== null) {
+          var error_text = [
+            'Could not find ' + item.name + '; ensure it is installed and available in PATH.',
+            '\tTried to execute: ' + item.command,
+            '\tGot error: ' + stderr
+          ];
 
-        if (item.help) {
-          // generic help for all platforms
-          if (typeof item.help == 'string') {
-            error_text.push(item.help);
-          }
-          // platform-specific help
-          else if (typeof item.help == 'object') {
-            if (item.help[process.platform]) {
-              // array-ize the string
-              if (typeof item.help[process.platform] !== 'object') {
-                item.help[process.platform] = [item.help[process.platform]];
-              }
+          if (item.help) {
+            // generic help for all platforms
+            if (typeof item.help == 'string') {
+              error_text.push(item.help);
+            }
+            // platform-specific help
+            else if (typeof item.help == 'object') {
+              if (item.help[process.platform]) {
+                // array-ize the string
+                if (typeof item.help[process.platform] !== 'object') {
+                  item.help[process.platform] = [item.help[process.platform]];
+                }
 
-              for (var i in item.help[process.platform]) {
-                error_text.push(item.help[process.platform][i]);
+                for (var i in item.help[process.platform]) {
+                  error_text.push(item.help[process.platform][i]);
+                }
               }
             }
           }
+
+          deferred.reject(error_text.join(os.EOL));
+
+          return;
         }
 
-        deferred.reject(error_text.join(os.EOL));
+        if (item.regex) {
+          var matches = stdout.match(item.regex);
+          if (matches) {
+            var cv = require('compare-version');
 
-        return;
-      }
+            // >= 0 is all good
+            if (cv(matches[1], item.version) < 0) {
+              deferred.reject(item.name + ' was found, but a newer version is required. Please upgrade ' + item.name + ' to version ' + item.version + ' or higher.');
+            }
 
-      if (item.regex) {
-        var matches = stdout.match(item.regex);
-        if (matches) {
-          var cv = require('compare-version');
-
-          // >= 0 is all good
-          if (cv(matches[1], item.version) < 0) {
-            deferred.reject(item.name + ' was found, but a newer version is required. Please upgrade ' + item.name + ' to version ' + item.version + ' or higher.');
+            item.found_version = matches[1];
           }
-
-          item.found_version = matches[1];
+          else {
+            deferred.reject(item.name + ' was found, but the version could not be determined.');
+          }
         }
-        else {
-          deferred.reject(item.name + ' was found, but the version could not be determined.');
-        }
-      }
 
-      dialog.append(item.name + ' found.' + os.EOL);
-      deferred.resolve(item);
-    });
+        dialog.append(item.name + ' found.' + os.EOL);
+        deferred.resolve(item);
+      });
 
-    promises.push(deferred.promise);
+      return deferred.promise;
+    };
+
+    chain = chain.then(link);
   });
 
-  return Q.all(promises);
+  return chain;
 }
 
 /**
@@ -870,9 +875,9 @@ function saveConfigFile() {
   yamlString = YAML.stringify(drupalvm_config, 2);
   var fs = require('fs');
   fs.writeFile(drupalvm_home + '/config.yml', yamlString, function (err) {
-      if(err) {
-          return console.log(err);
-      }
+    if(err) {
+      return console.log(err);
+    }
   });
   drupalvm_needsprovision = true;
   $("#reprovisionAlert").show("fast");
