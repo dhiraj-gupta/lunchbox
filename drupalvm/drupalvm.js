@@ -189,24 +189,32 @@ $("#drupalVMReset>button").click(function () {
  * @return {Object} A promise object (wrapper for all individual promises).
  */
 function checkPrerequisites(dialog) {
-  // all items added to the chain will be processed sequentially
-  var chain = Q.fcall(function (){});
+  var qc = require('./modules/qchain');
 
   // npm dependencies
-  var npm_deferred = Q.defer();
-  require('check-dependencies')().then(function (result) {
-    if (!result.depsWereOk) {
-      npm_deferred.reject('Unmet npm dependencies. Please run "npm install" in the project directory.');
-      return;
-    }
+  qc.add(function () {
+    var deferred = qc.defer();
 
-    npm_deferred.resolve(null);
+    require('check-dependencies')().then(function (result) {
+      if (!result.depsWereOk) {
+        deferred.reject('Unmet npm dependencies. Please run "npm install" in the project directory.');
+        return;
+      }
+
+      deferred.resolve(null);
+    });
+
+    return deferred.promise;
   });
 
-  chain = chain.then(npm_deferred.promise);
 
-  // software dependencies
-  var dependencies = [{
+  // check for ansible, and if it is present, ensure ansible-galaxy install has
+  // been ran
+  // var ansible_deferred = Q.defer();
+  // chain = chain.
+
+  // general software dependencies
+  var software = [{
     // virtualbox
     name: 'VirtualBox',
     command: 'vboxmanage --version',
@@ -271,9 +279,9 @@ function checkPrerequisites(dialog) {
 
   var exec = require('child_process').exec;
 
-  dependencies.forEach(function (item) {
-    var link = function() {
-      var deferred = Q.defer();
+  software.forEach(function (item) {
+    qc.add(function () {
+      var deferred = qc.defer();
       
       exec(item.command, [], function (error, stdout, stderr) {
         if (error !== null) {
@@ -330,12 +338,10 @@ function checkPrerequisites(dialog) {
       });
 
       return deferred.promise;
-    };
-
-    chain = chain.then(link);
+    });
   });
 
-  return chain;
+  return qc.chain();
 }
 
 /**
