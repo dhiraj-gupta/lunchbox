@@ -207,12 +207,6 @@ function checkPrerequisites(dialog) {
     return deferred.promise;
   });
 
-
-  // check for ansible, and if it is present, ensure ansible-galaxy install has
-  // been ran
-  // var ansible_deferred = Q.defer();
-  // chain = chain.
-
   // general software dependencies
   var software = [{
     // virtualbox
@@ -339,6 +333,92 @@ function checkPrerequisites(dialog) {
 
       return deferred.promise;
     });
+  });
+
+  // check for ansible, and if it is present, ensure ansible-galaxy install has
+  // been run
+  qc.add(function () {
+    var deferred = qc.defer();
+
+    exec('ansible --version', [], function (error) {
+      // no ansible on host, no problem
+      if (error !== null) {
+        deferred.resolve(null);
+      }
+
+      // no error, so we have ansible and need to ensure all roles are in place
+      dialog.append('Ansible found. Checking role requirements.' + os.EOL);
+
+      var https = require('https');
+      var source = 'https://raw.githubusercontent.com/geerlingguy/drupal-vm/master/provisioning/requirements.yml';
+
+      https.get(source, function(res) {
+        if (res.statusCode != 200) {
+          deferred.reject('Could not get list of ansible roles. Expected list to be available at:' + os.EOL + '\t' + source);
+          return;
+        }
+
+        var response = '';
+        res.on('data', function(d) {
+          response += d.toString('utf8');
+        });
+
+        res.on('end', function(d) {
+          // build list of required roles
+          var required = [];
+          response.split("\n").forEach(function (line) {
+            var parts = line.split(' ');
+            if (parts.length == 3) {
+              required.push(parts.pop());
+            }
+          });
+
+          var present = [];
+          // build list of present roles
+          exec('ansible-galaxy list', [], function (error, stdout, stderr) {
+            if (error !== null) {
+              deferred.reject('Could not execute "ansible-galaxy list".');
+            }
+
+            stdout.split("\n").forEach(function (line) {
+              var parts = line.split(' ');
+              if (parts.length == 3) {
+                present.push(parts[1].replace(',', ''));
+              }
+            });
+
+            delta = required.filter(function (item) {
+              return (present.indexOf(item) == -1);
+            });
+
+            if (delta.length) {
+              var error_text = [
+                'The following required ansible-galaxy roles are missing:'
+              ];
+
+              delta.forEach(function (item) {
+                error_text.push("\t" + item);
+              });
+
+              error_text.push('This can be fixed by running "galaxy-install" as specified in the DrupalVM quickstart:');
+              error_text.push("\t" + ' https://github.com/geerlingguy/drupal-vm');
+              error_text.push('If you encounter the "Error: cannot find role" issue, ensure that /etc/ansible/roles is owned by your user.');
+
+              deferred.reject(error_text.join(os.EOL));
+              return;
+            }
+
+            deferred.resolve(null);
+          });
+
+        });
+
+      }).on('error', function(error) {
+        deferred.reject('Could not parse list of ansible roles. Received error:' + os.EOL + '\t' + error);
+      });
+    });
+
+    return deferred.promise;
   });
 
   return qc.chain();
