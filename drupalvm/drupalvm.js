@@ -189,22 +189,26 @@ $("#drupalVMReset>button").click(function () {
  * @return {Object} A promise object (wrapper for all individual promises).
  */
 function checkPrerequisites(dialog) {
-  var promises = [];
+  var qc = require('./modules/qchain');
 
   // npm dependencies
-  var npm_deferred = Q.defer();
-  require('check-dependencies')().then(function (result) {
-    if (!result.depsWereOk) {
-      npm_deferred.reject('Unmet npm dependencies. Please run "npm install" in the project directory.');
-      return;
-    }
+  qc.add(function () {
+    var deferred = qc.defer();
 
-    npm_deferred.resolve(null);
+    require('check-dependencies')().then(function (result) {
+      if (!result.depsWereOk) {
+        deferred.reject('Unmet npm dependencies. Please run "npm install" in the project directory.');
+        return;
+      }
+
+      deferred.resolve(null);
+    });
+
+    return deferred.promise;
   });
-  promises.push(npm_deferred.promise);
 
-  // software dependencies
-  var dependencies = [{
+  // general software dependencies
+  var software = [{
     // virtualbox
     name: 'VirtualBox',
     command: 'vboxmanage --version',
@@ -241,7 +245,10 @@ function checkPrerequisites(dialog) {
     regex: /vagrant-hostsupdater \((\d+\.\d+\.\d+)\)/i,
     version: '1.0.1',
     help: "Vagrant HostsUpdater Plugin can be installed by running 'vagrant plugin install vagrant-hostsupdater'."
-  }, {
+  }];
+
+  /*
+   {
     // ansible
     name: 'Ansible',
     command: 'ansible --version',
@@ -261,72 +268,160 @@ function checkPrerequisites(dialog) {
       ],
       win32: 'Ansible installation instructions: http://docs.ansible.com/ansible/intro_windows.html'
     }
-  }];
+  }
+  */
 
   var exec = require('child_process').exec;
-  var dep_promises = [];
 
-  dependencies.forEach(function (item) {
-    var deferred = Q.defer();
-    
-    exec(item.command, [], function (error, stdout, stderr) {
-      if (error !== null) {
-        var error_text = [
-          'Could not find ' + item.name + '; ensure it is installed and available in PATH.',
-          '\tTried to execute: ' + item.command,
-          '\tGot error: ' + stderr
-        ];
+  software.forEach(function (item) {
+    qc.add(function () {
+      var deferred = qc.defer();
+      
+      exec(item.command, [], function (error, stdout, stderr) {
+        if (error !== null) {
+          var error_text = [
+            'Could not find ' + item.name + '; ensure it is installed and available in PATH.',
+            '\tTried to execute: ' + item.command,
+            '\tGot error: ' + stderr
+          ];
 
-        if (item.help) {
-          // generic help for all platforms
-          if (typeof item.help == 'string') {
-            error_text.push(item.help);
-          }
-          // platform-specific help
-          else if (typeof item.help == 'object') {
-            if (item.help[process.platform]) {
-              // array-ize the string
-              if (typeof item.help[process.platform] !== 'object') {
-                item.help[process.platform] = [item.help[process.platform]];
-              }
+          if (item.help) {
+            // generic help for all platforms
+            if (typeof item.help == 'string') {
+              error_text.push(item.help);
+            }
+            // platform-specific help
+            else if (typeof item.help == 'object') {
+              if (item.help[process.platform]) {
+                // array-ize the string
+                if (typeof item.help[process.platform] !== 'object') {
+                  item.help[process.platform] = [item.help[process.platform]];
+                }
 
-              for (var i in item.help[process.platform]) {
-                error_text.push(item.help[process.platform][i]);
+                for (var i in item.help[process.platform]) {
+                  error_text.push(item.help[process.platform][i]);
+                }
               }
             }
           }
+
+          deferred.reject(error_text.join(os.EOL));
+
+          return;
         }
 
-        deferred.reject(error_text.join(os.EOL));
+        if (item.regex) {
+          var matches = stdout.match(item.regex);
+          if (matches) {
+            var cv = require('compare-version');
 
-        return;
-      }
+            // >= 0 is all good
+            if (cv(matches[1], item.version) < 0) {
+              deferred.reject(item.name + ' was found, but a newer version is required. Please upgrade ' + item.name + ' to version ' + item.version + ' or higher.');
+            }
 
-      if (item.regex) {
-        var matches = stdout.match(item.regex);
-        if (matches) {
-          var cv = require('compare-version');
-
-          // >= 0 is all good
-          if (cv(matches[1], item.version) < 0) {
-            deferred.reject(item.name + ' was found, but a newer version is required. Please upgrade ' + item.name + ' to version ' + item.version + ' or higher.');
+            item.found_version = matches[1];
           }
-
-          item.found_version = matches[1];
+          else {
+            deferred.reject(item.name + ' was found, but the version could not be determined.');
+          }
         }
-        else {
-          deferred.reject(item.name + ' was found, but the version could not be determined.');
-        }
-      }
 
-      dialog.append(item.name + ' found.' + os.EOL);
-      deferred.resolve(item);
+        dialog.append(item.name + ' found.' + os.EOL);
+        deferred.resolve(item);
+      });
+
+      return deferred.promise;
     });
-
-    promises.push(deferred.promise);
   });
 
-  return Q.all(promises);
+  // check for ansible, and if it is present, ensure ansible-galaxy install has
+  // been run
+  qc.add(function () {
+    var deferred = qc.defer();
+
+    exec('ansible --version', [], function (error) {
+      // no ansible on host, no problem
+      if (error !== null) {
+        deferred.resolve(null);
+      }
+
+      // no error, so we have ansible and need to ensure all roles are in place
+      dialog.append('Ansible found. Checking role requirements.' + os.EOL);
+
+      var https = require('https');
+      var source = 'https://raw.githubusercontent.com/geerlingguy/drupal-vm/master/provisioning/requirements.yml';
+
+      https.get(source, function(res) {
+        if (res.statusCode != 200) {
+          deferred.reject('Could not get list of ansible roles. Expected list to be available at:' + os.EOL + '\t' + source);
+          return;
+        }
+
+        var response = '';
+        res.on('data', function(d) {
+          response += d.toString('utf8');
+        });
+
+        res.on('end', function(d) {
+          // build list of required roles
+          var required = [];
+          response.split("\n").forEach(function (line) {
+            var parts = line.split(' ');
+            if (parts.length == 3) {
+              required.push(parts.pop());
+            }
+          });
+
+          var present = [];
+          // build list of present roles
+          exec('ansible-galaxy list', [], function (error, stdout, stderr) {
+            if (error !== null) {
+              deferred.reject('Could not execute "ansible-galaxy list".');
+            }
+
+            stdout.split("\n").forEach(function (line) {
+              var parts = line.split(' ');
+              if (parts.length == 3) {
+                present.push(parts[1].replace(',', ''));
+              }
+            });
+
+            delta = required.filter(function (item) {
+              return (present.indexOf(item) == -1);
+            });
+
+            if (delta.length) {
+              var error_text = [
+                'The following required ansible-galaxy roles are missing:'
+              ];
+
+              delta.forEach(function (item) {
+                error_text.push("\t" + item);
+              });
+
+              error_text.push('This can be fixed by running "galaxy-install" as specified in the DrupalVM quickstart:');
+              error_text.push("\t" + ' https://github.com/geerlingguy/drupal-vm');
+              error_text.push('If you encounter the "Error: cannot find role" issue, ensure that /etc/ansible/roles is owned by your user.');
+
+              deferred.reject(error_text.join(os.EOL));
+              return;
+            }
+
+            deferred.resolve(null);
+          });
+
+        });
+
+      }).on('error', function(error) {
+        deferred.reject('Could not parse list of ansible roles. Received error:' + os.EOL + '\t' + error);
+      });
+    });
+
+    return deferred.promise;
+  });
+
+  return qc.chain();
 }
 
 /**
@@ -866,9 +961,9 @@ function saveConfigFile() {
   yamlString = YAML.stringify(drupalvm_config, 2);
   var fs = require('fs');
   fs.writeFile(drupalvm_home + '/config.yml', yamlString, function (err) {
-      if(err) {
-          return console.log(err);
-      }
+    if(err) {
+      return console.log(err);
+    }
   });
   drupalvm_needsprovision = true;
   $("#reprovisionAlert").show("fast");
