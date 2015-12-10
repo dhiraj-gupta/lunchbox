@@ -344,6 +344,7 @@ function checkPrerequisites(dialog) {
       // no ansible on host, no problem
       if (error !== null) {
         deferred.resolve(null);
+        return;
       }
 
       // no error, so we have ansible and need to ensure all roles are in place
