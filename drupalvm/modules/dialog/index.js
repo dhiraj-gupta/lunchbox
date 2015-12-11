@@ -15,6 +15,9 @@ var dialog = (function() {
     hide_after_process: false
   };
 
+  // child process for writing user input
+  var child = {};
+
   /**
    * Returns HTML template for Dialog's content.
    * @return {[type]} [description]
@@ -35,6 +38,9 @@ var dialog = (function() {
 
     output += 'Details';
     output += '<pre class="processingLog"></pre>';
+
+    output += '<input type="textfield" class="console-input" />';
+    output += '<input type="submit" value="Submit" class="console-submit" />';
 
     return output;
   }
@@ -60,6 +66,31 @@ var dialog = (function() {
       dialog = bootbox.dialog({
         title: title,
         message: template()
+      });
+
+      // set up input processing
+      dialog.find('input.console-submit').click(function () {
+        if (!child) {
+          return;
+        }
+
+        var input = dialog.find('input.console-input');
+        var value = input.val();
+
+        console.log('value is: ' + value);
+
+        child.stdin.write(value);
+        child.stdin.write('\n');
+
+        var writer = child.stdin;
+
+        writer.end('this is the end\n');
+        writer.on('finish', function() {
+          console.log('all writes are now complete.');
+        });
+        
+        // clear input
+        input.val('');
       });
 
       return this;
@@ -165,10 +196,19 @@ var dialog = (function() {
     },
 
     /**
+     * Sets child process.
+     * 
+     * @param {[type]} process [description]
+     */
+    setChildProcess: function (process) {
+      child = process;
+    },
+
+    /**
      * Hides Dialog.
      */
     hide: function () {
-      dialog.modal('hide');
+      // dialog.modal('hide');
     }
   };
 })();

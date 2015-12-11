@@ -3,7 +3,7 @@
   color: #cdcdcd;
   background-color: #fff;
   border: none;
-  height: 340px;
+  height: 310px;
 }
 
   .processingLog .error {
@@ -12,6 +12,18 @@
 
   .processingLog .warning {
     color: #e49701;
+  }
+
+  input.console-input {
+    padding: 5px 10px;
+    width: 700px;
+  }
+
+  input.console-submit {
+    font-weight: bold;
+    margin: 0 0 0 10px;
+    padding: 7px 10px;
+    width: 158px;
   }
 
 
