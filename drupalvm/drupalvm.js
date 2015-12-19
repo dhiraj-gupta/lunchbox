@@ -190,60 +190,6 @@ $("#drupalVMReset>button").click(function () {
 function checkPrerequisites(dialog) {
   var qc = require('./modules/qchain');
 
-  // test process w/ required user input
-  qc.add(function () {
-    var deferred = qc.defer();
-
-    var util = require('util');
-
-    var exec = require('child_process').exec;
-    var child = exec('drush cc', []);
-
-    dialog.setChildProcess(child);
-
-    child.stdin.resume();
-    child.stdin.setEncoding('utf8');
-    child.stdin.setDefaultEncoding('utf-8');
-
-    child.on('exit', function (a) {
-      console.log('exit:');
-      console.log(a);
-
-      // deferred.resolve(null);
-    });
-
-    child.on('close', function (a) {
-      console.log('close:');
-      console.log(a);
-
-      deferred.resolve(null);
-    });
-
-    // child.on('error', function (a) {
-    //   console.log('error:');
-    //   console.log(a);
-
-    //   deferred.resolve(null);
-    // });
-
-    child.stdout.on('data', function (data) {
-      dialog.append(data);
-
-      // child.stdin.write('0\n');
-    });
-
-    child.stdin.on('data', function (text) {
-      console.log('received data:', util.inspect(text));
-      if (util.inspect(text) == 'quit') {
-        console.log('in quit');
-      }
-    });
-
-    child.stdin.write('1');
-
-    return deferred.promise;
-  });
-
   // npm dependencies
   qc.add(function () {
     var deferred = qc.defer();
@@ -388,6 +334,23 @@ function checkPrerequisites(dialog) {
     });
   });
 
+  // // test process w/ required user input
+  // qc.add(function () {
+  //   var deferred = qc.defer();
+
+  //   // commands that require sudo should be ran with a -S flag; ex: "sudo -S ls"
+  //   var child = require('child_process').exec('drush cc', []);
+
+  //   dialog.setChildProcess(child);
+  //   dialog.logProcess(child);
+
+  //   child.on('close', function () {
+  //     deferred.resolve(null);
+  //   });
+
+  //   return deferred.promise;
+  // });
+
   // check for ansible, and if it is present, ensure ansible-galaxy install has
   // been run
   qc.add(function () {
@@ -454,7 +417,7 @@ function checkPrerequisites(dialog) {
                 error_text.push("\t" + item);
               });
 
-              error_text.push('This can be fixed by running "galaxy-install" as specified in the DrupalVM quickstart:');
+              error_text.push('This can be fixed by running "ansible-galaxy install" as specified in the DrupalVM quickstart:');
               error_text.push("\t" + ' https://github.com/geerlingguy/drupal-vm');
               error_text.push('If you encounter the "Error: cannot find role" issue, ensure that /etc/ansible/roles is owned by your user.');
 

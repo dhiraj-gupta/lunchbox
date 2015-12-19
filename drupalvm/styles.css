@@ -26,6 +26,10 @@
     width: 158px;
   }
 
+  input.console-input[disabled],
+  input.console-submit[disabled] {
+    opacity: 0.3;
+  }
 
 #menu_drupalvm_dashboard a {
   padding-top: 25px;

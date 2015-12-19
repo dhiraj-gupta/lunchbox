@@ -18,6 +18,10 @@ var dialog = (function() {
   // child process for writing user input
   var child = {};
 
+  // dom elements
+  var dom_input = null;
+  var dom_submit = null;
+
   /**
    * Returns HTML template for Dialog's content.
    * @return {[type]} [description]
@@ -68,29 +72,29 @@ var dialog = (function() {
         message: template()
       });
 
+      // find & disable inputs until they're required
+      dom_input = dialog.find('input.console-input');
+      dom_submit = dialog.find('input.console-submit');
+      dom_input.attr('disabled', 'disabled')
+      dom_submit.attr('disabled', 'disabled')
+
       // set up input processing
-      dialog.find('input.console-submit').click(function () {
+      dom_submit.click(function () {
         if (!child) {
           return;
         }
+        
+        child.on('close', function () {
+          dom_input.attr('disabled', 'disabled')
+          dom_submit.attr('disabled', 'disabled')
+        });
 
-        var input = dialog.find('input.console-input');
-        var value = input.val();
-
-        console.log('value is: ' + value);
-
+        var value = dom_input.val();
         child.stdin.write(value);
         child.stdin.write('\n');
 
-        var writer = child.stdin;
-
-        writer.end('this is the end\n');
-        writer.on('finish', function() {
-          console.log('all writes are now complete.');
-        });
-        
         // clear input
-        input.val('');
+        dom_input.val('');
       });
 
       return this;
@@ -202,6 +206,11 @@ var dialog = (function() {
      */
     setChildProcess: function (process) {
       child = process;
+
+      // the only reason to be setting a child process is to pass it user
+      // input, so enable the input elements
+      dom_input.removeAttr('disabled');
+      dom_submit.removeAttr('disabled');
     },
 
     /**
