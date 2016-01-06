@@ -4,6 +4,11 @@ var bootbox = require('bootbox');
 var Q = require('q');
 var os = require('os');
 
+var qc = require('./modules/qchain');
+var storage = require('./modules/storage');
+
+var settings = {};
+
 var drupalvm_id = '';
 var drupalvm_name = '';
 var drupalvm_home = '';
@@ -24,6 +29,13 @@ $(document).ready(function () {
   // these will be performed sequentially; each operation will only execute
   // if the previous one completed successfully
   var operations = [];
+
+  operations.push({
+    op: loadSettings,
+    args: [
+      dialog
+    ]
+  });
 
   operations.push({
     op: checkPrerequisites,
@@ -69,6 +81,15 @@ $(document).ready(function () {
   });
 
   chain.then(function (result) {
+    // settings.id = '';
+    // settings.name = '';
+    // settings.home = '';
+    // settings.config = '';
+    // settings.needsprovision = false;
+    // settings.running = false;
+
+    // storage.save(settings);
+
     // all done
     drupalvmBuildDashboard();
   }, function (error) {
@@ -182,14 +203,36 @@ $("#drupalVMReset>button").click(function () {
 // ------ Event Handlers ------ //
 
 /**
+ * Loads & parses settings.json into the `settings` object.
+ * 
+ * @param  {[type]} dialog [description]
+ * @return {[type]}        [description]
+ */
+function loadSettings(dialog) {
+  var deferred = qc.defer();
+
+  dialog.append('Loading Lunchbox settings.' + os.EOL);
+  
+  storage.load(function (error, data) {
+    if (error !== null) {
+      deferred.reject(error);
+    }
+
+    settings = data;
+
+    deferred.resolve();
+  });
+
+  return deferred.promise;
+}
+
+/**
  * Runs through a series of Promise-based checks against npm and general
  * software dependencies. 
  * 
  * @return {Object} A promise object (wrapper for all individual promises).
  */
 function checkPrerequisites(dialog) {
-  var qc = require('./modules/qchain');
-
   // npm dependencies
   qc.add(function () {
     var deferred = qc.defer();

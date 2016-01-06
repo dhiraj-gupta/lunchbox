@@ -217,7 +217,7 @@ var dialog = (function() {
      * Hides Dialog.
      */
     hide: function () {
-      // dialog.modal('hide');
+      dialog.modal('hide');
     }
   };
 })();
