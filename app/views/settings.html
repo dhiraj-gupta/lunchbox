@@ -1,0 +1,99 @@
+<script type="text/javascript">
+  load_mod('components/nav').reloadModule('views/settings');
+</script>
+
+<!-- SETTINGS VIEW -->
+<div id="panel_drupalvm_settings" class="drupalvm_section">
+  <h1 class="page-header">Settings</h1>
+    <form>
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h3 class="panel-title">VM Settings</h3>
+        </div>
+        <div class="panel-body">
+          <div class="form-group">
+            <label for="vagrant_ip">Virtual machine IP address</label>
+            <input class="form-control" id="vagrant_ip" placeholder="192.168.1.88">
+          </div>
+          <div class="form-group">
+            <label for="vagrant_hostname">Default hostname</label>
+            <input class="form-control" id="vagrant_hostname" placeholder="drupalvm.dev">
+          </div>
+          <div class="form-group">
+            <label for="vagrant_synced_folders">Local files</label>
+            <input class="form-control" id="vagrant_synced_folders" placeholder="~/Sites/drupalvm">
+          </div>
+          <div class="form-group">
+            <label for="vagrant_memory">VM memory</label>
+            <div class="input-group">
+            <input class="form-control" id="vagrant_memory" placeholder="1024"><div class="input-group-addon">MBs</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="vagrant_cpus">VM CPUs</label>
+            <input class="form-control" id="vagrant_cpus" placeholder="2">
+          </div>
+          <label>File sync method</label><br>
+          <div class="btn-group" data-toggle="buttons">
+            <label class="btn btn-primary active" id="drupalvm_settings_filesync_default">
+              <input type="radio" name="options" autocomplete="off" checked> Default
+            </label>
+            <label class="btn btn-primary" id="drupalvm_settings_filesync_rsync">
+              <input type="radio" name="options" autocomplete="off"> Rsync
+            </label>
+            <label class="btn btn-primary" id="drupalvm_settings_filesync_nfs">
+              <input type="radio" name="options" autocomplete="off"> NFS
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel panel-default" id="drupalvm_settings_installedextras">
+        <div class="panel-heading">
+          <h3 class="panel-title">Installed Extras</h3>
+        </div>
+
+        <div class="panel-body">
+          <em>Note: reflects config file, but does not save changes yet</em>
+          <div class="checkbox">
+            <label><input type="checkbox" id="drupalvm_settings_adminer"> Adminer</label>
+          </div>
+          <div class="checkbox">
+            <label><input type="checkbox" id="drupalvm_settings_mailhog"> MailHog</label>
+          </div>
+          <div class="checkbox">
+            <label><input type="checkbox" id="drupalvm_settings_memcached"> Memcached</label>
+          </div>
+          <div class="checkbox">
+            <label><input type="checkbox" id="drupalvm_settings_nodejs"> NodeJS</label>
+          </div>
+          <div class="checkbox">
+            <label><input type="checkbox" id="drupalvm_settings_pimpmylog"> PimpMyLog</label>
+          </div>
+          <div class="checkbox">
+            <label><input type="checkbox" id="drupalvm_settings_ruby"> Ruby</label>
+          </div>
+          <div class="checkbox">
+            <label><input type="checkbox" id="drupalvm_settings_selenium"> Selenium</label>
+          </div>
+          <div class="checkbox">
+            <label><input type="checkbox" id="drupalvm_settings_solr"> Solr</label>
+          </div>
+          <div class="checkbox">
+            <label><input type="checkbox" id="drupalvm_settings_varnish"> Varnish</label>
+          </div>
+          <div class="checkbox">
+            <label><input type="checkbox" id="drupalvm_settings_xdebug"> XDebug</label>
+          </div>
+          <div class="checkbox">
+            <label><input type="checkbox" id="drupalvm_settings_xhprof"> XHProf</label>
+          </div>
+        </div>
+      </div>
+
+      <div id="drupalVMReset">
+      <button type="button" class="btn btn-warning">Reset settings</button>
+      </div>
+    </form>
+</div>
+<!-- END SETTINGS VIEW -->
