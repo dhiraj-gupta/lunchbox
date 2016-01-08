@@ -43,7 +43,7 @@ app.on('ready', function() {
     center: true
   });
 
-  mainWindow.loadUrl('file://' + __dirname + '/drupalvm/index.html');
+  mainWindow.loadUrl('file://' + __dirname + '/app/index.html');
 
   mainWindow.setMenuBarVisibility(false);
 
@@ -58,7 +58,7 @@ app.on('ready', function() {
 
   // allow local config access to mainWindow via custom event bindings
   var fs = require('fs');
-  var config_path = './drupalvm/local_config.js';
+  var config_path = './app/local_config.js';
   fs.exists(config_path, function (exists) {
     if (exists) {
       var trigger = require(config_path);

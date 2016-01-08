@@ -4,16 +4,22 @@ var bootbox = require('bootbox');
 var Q = require('q');
 var os = require('os');
 
-var qc = require('./modules/qchain');
-var storage = require('./modules/storage');
+/**
+ * Global helper to load custom modules. Alleviates the need to provide a
+ * relative filepath when loading a custom module from somewhere other than 
+ * a file in /app/
+ * 
+ * @param  {[type]} src [description]
+ * @return {[type]}     [description]
+ */
+window['load_mod'] = function (src) {
+  return require('./' + src + '.js');
+}
+
+var qc = load_mod('tools/qchain');
+var storage = load_mod('internal/storage');
 
 var settings = {};
-
-var drupalvm_id = '';
-var drupalvm_name = '';
-var drupalvm_home = '';
-
-var drupalvm_config = '';
 
 var drupalvm_needsprovision = false;
 var drupalvm_running = false;
@@ -24,7 +30,7 @@ var DRUPALVM_PROVISION = "provision";
 var DRUPALVM_RELOAD = "reload";
 
 $(document).ready(function () {
-  var dialog = require('./modules/dialog').create('Reading configuration...');
+  var dialog = load_mod('components/dialog').create('Reading configuration...');
 
   // these will be performed sequentially; each operation will only execute
   // if the previous one completed successfully
@@ -512,13 +518,15 @@ function detectDrupalVM(dialog) {
 
       // Sample: d21e8e6  drupalvm virtualbox poweroff /home/nate/Projects/drupal-vm
       if (parts.length >= 5 && parts[1] == 'drupalvm') {
-        drupalvm_id = parts[0];
-        drupalvm_name = parts[1];
-        drupalvm_state = parts[3];
-        drupalvm_home = parts[4];
+        settings.vm = {};
+        settings.vm.id = parts[0];
+        settings.vm.name = parts[1];
+        settings.vm.state = parts[3];
+        settings.vm.home = parts[4];
 
-        var config_file = drupalvm_home + '/config.yml';
-        drupalvm_config = yaml.load(config_file);
+        var config_file = settings.vm.home + '/config.yml';
+        settings.vm.config = yaml.load(config_file);
+        storage.save(settings);
 
         deferred.resolve();
         return;
@@ -542,7 +550,7 @@ function updateVMStatus(dialog) {
 
   // Check if DrupalVM is running
   var spawn = require('child_process').spawn;
-  var child = spawn('vagrant', ['status', drupalvm_id]);
+  var child = spawn('vagrant', ['status', settings.vm.id]);
 
   var stdout = '';
   dialog.logProcess(child, function (output) {
@@ -625,9 +633,9 @@ function controlVM(action) {
   }
 
   var spawn = require('child_process').spawn;
-  var child = spawn('vagrant', [cmd, drupalvm_id]);
+  var child = spawn('vagrant', [cmd, settings.vm.id]);
 
-  var dialog = require('./modules/dialog').create(title);
+  var dialog = require('components/dialog').create(title);
   dialog.logProcess(child);
 
   child.on('exit', function (exitCode) {
@@ -670,8 +678,8 @@ function drupalvmBuildSitesList() {
   drupalvmHidePanels();
   $('#drupalvmSites').html("");
 
-  for(var x in drupalvm_config.apache_vhosts) {
-    var servername = drupalvm_config.apache_vhosts[x].servername;
+  for(var x in settings.vm.config.apache_vhosts) {
+    var servername = settings.vm.config.apache_vhosts[x].servername;
 
     switch(servername) {
       // We don't want to include these default entries.
@@ -806,7 +814,7 @@ function collectNewSiteDetails() {
 function createNewSite(name, gitUrl, composer, webroot) {
   // Create the directory
   var fs = require('fs');
-  var dir = drupalvm_config.vagrant_synced_folders[0].local_path + "/" + name;
+  var dir = settings.vm.config.vagrant_synced_folders[0].local_path + "/" + name;
 
   // Perform a git init
   if(gitUrl) {
@@ -820,10 +828,10 @@ function createNewSite(name, gitUrl, composer, webroot) {
 
   // Create the apache vhost
   var newSite = new Object();
-  newSite.servername = name + "." + drupalvm_config.vagrant_hostname;
+  newSite.servername = name + "." + settings.vm.config.vagrant_hostname;
   newSite.projectroot = "/var/www/" + name;
   newSite.documentroot = "/var/www/" + name + "/" + webroot;
-  drupalvm_config.apache_vhosts.push(newSite);
+  settings.vm.config.apache_vhosts.push(newSite);
 
 
   // Create the database
@@ -831,7 +839,7 @@ function createNewSite(name, gitUrl, composer, webroot) {
   newDatabase.name = name;
   newDatabase.encoding = "utf8";
   newDatabase.collation = "utf8_general_ci";
-  drupalvm_config.mysql_databases.push(newDatabase);
+  settings.vm.config.mysql_databases.push(newDatabase);
 
   saveConfigFile();
 
@@ -844,7 +852,7 @@ function createSiteGit(dir, projectGitUrl, composer){
     ['clone', projectGitUrl, dir]);
 
   var stdout = '';
-  var dialog = require('./modules/dialog').create('Cloning from git ...');
+  var dialog = require('components/dialog').create('Cloning from git ...');
   dialog.logProcess(child, function (output) {
     stdout += output;
   });
@@ -869,7 +877,7 @@ function runComposer(dir) {
       '--dev'
     ]);
 
-  var dialog = require('./modules/dialog').create('Running composer...');
+  var dialog = require('components/dialog').create('Running composer...');
   dialog.logProcess(child);
 }
 
@@ -916,11 +924,11 @@ function deleteSite(projectName, deleteSettings) {
   }
 
   if(deleteSettings.removeApacheVhost) {
-    for(var x in drupalvm_config.apache_vhosts) {
-      var servername = drupalvm_config.apache_vhosts[x].servername;
+    for(var x in settings.vm.config.apache_vhosts) {
+      var servername = settings.vm.config.apache_vhosts[x].servername;
       var name = servername.split(".")[0];
       if(name == projectName) {
-        drupalvm_config.apache_vhosts.splice(x, 1);
+        settings.vm.config.apache_vhosts.splice(x, 1);
       }
     }
   }
@@ -940,22 +948,22 @@ function drupalvmBuildSettings() {
   drupalvmHidePanels();
 
   // IP address
-  $("#vagrant_ip").val(drupalvm_config.vagrant_ip);
+  $("#vagrant_ip").val(settings.vm.config.vagrant_ip);
 
   // Hostname
-  $("#vagrant_hostname").val(drupalvm_config.vagrant_hostname);
+  $("#vagrant_hostname").val(settings.vm.config.vagrant_hostname);
 
   // Local files
-  $("#vagrant_synced_folders").val(drupalvm_config.vagrant_synced_folders[0].local_path);
+  $("#vagrant_synced_folders").val(settings.vm.config.vagrant_synced_folders[0].local_path);
 
   // Memory
-  $("#vagrant_memory").val(drupalvm_config.vagrant_memory);
+  $("#vagrant_memory").val(settings.vm.config.vagrant_memory);
 
   // CPUs
-  $("#vagrant_cpus").val(drupalvm_config.vagrant_cpus);
+  $("#vagrant_cpus").val(settings.vm.config.vagrant_cpus);
 
   // VM file sync mechanism
-  var file_sync_type = drupalvm_config.vagrant_synced_folders[0].type;
+  var file_sync_type = settings.vm.config.vagrant_synced_folders[0].type;
   switch(file_sync_type) {
     case "rsync":
       $("#drupalvm_settings_filesync_rsync").button('toggle');
@@ -971,7 +979,7 @@ function drupalvmBuildSettings() {
 
   // Installed extras
   $('#drupalvm_settings_installedextras input').prop('checked', false); // reset
-  var installed_extras = drupalvm_config.installed_extras;
+  var installed_extras = settings.vm.config.installed_extras;
   for(x in installed_extras) {
     var extra = installed_extras[x];
     $('#drupalvm_settings_' + extra).prop('checked', true);
@@ -985,23 +993,23 @@ function drupalvmBuildSettings() {
 function saveVMSettings(el) {
   switch(el) {
     case "vagrant_ip":
-      drupalvm_config.vagrant_ip = $("#vagrant_ip").val();
+      settings.vm.config.vagrant_ip = $("#vagrant_ip").val();
       break;
 
     case "vagrant_hostname":
-      drupalvm_config.vagrant_hostname = $("#vagrant_hostname").val();
+      settings.vm.config.vagrant_hostname = $("#vagrant_hostname").val();
       break;
 
     case "vagrant_memory":
-      drupalvm_config.vagrant_memory = parseInt($("#vagrant_memory").val());
+      settings.vm.config.vagrant_memory = parseInt($("#vagrant_memory").val());
       break;
 
     case "vagrant_cpus":
-      drupalvm_config.vagrant_cpus = parseInt( $("#vagrant_cpus").val() );
+      settings.vm.config.vagrant_cpus = parseInt( $("#vagrant_cpus").val() );
       break;
 
     case "vagrant_synced_folders":
-      drupalvm_config.vagrant_synced_folders[0].local_path = $("#vagrant_synced_folders").val();
+      settings.vm.config.vagrant_synced_folders[0].local_path = $("#vagrant_synced_folders").val();
       break;
   }
   saveConfigFile();
@@ -1010,17 +1018,17 @@ function saveVMSettings(el) {
 
 function saveFileSyncType(file_sync_type) {
   // Only update if the value is actually different.
-  if(file_sync_type != drupalvm_config.vagrant_synced_folders[0].type) {
-    drupalvm_config.vagrant_synced_folders[0].type = file_sync_type;
+  if(file_sync_type != settings.vm.config.vagrant_synced_folders[0].type) {
+    settings.vm.config.vagrant_synced_folders[0].type = file_sync_type;
     saveConfigFile();
   }
 }
 
 
 function saveConfigFile() {
-  yamlString = YAML.stringify(drupalvm_config, 2);
+  yamlString = YAML.stringify(settings.vm.config, 2);
   var fs = require('fs');
-  fs.writeFile(drupalvm_home + '/config.yml', yamlString, function (err) {
+  fs.writeFile(settings.vm.home + '/config.yml', yamlString, function (err) {
     if(err) {
       return console.log(err);
     }
@@ -1032,8 +1040,8 @@ function saveConfigFile() {
 
 
 function drupalVMResetSettings() {
-  var config_file = drupalvm_home + '/example.config.yml';
-  drupalvm_config = yaml.load(config_file);
+  var config_file = settings.vm.home + '/example.config.yml';
+  settings.vm.config = yaml.load(config_file);
   saveConfigFile();
 
   drupalvmBuildSettings();

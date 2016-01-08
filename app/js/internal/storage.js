@@ -1,8 +1,9 @@
 'use strict';
 
-var qc = require('../qchain');
 var fs = require('fs');
 var os = require('os');
+
+var qc = load_mod('tools/qchain');
 
 /**
  * Storage API.
