@@ -10,7 +10,6 @@ var public_path = app.getAppPath() + '/app';
  * Module for managing Bootbox dialogs.
  */
 var nav = (function() {
-  // private
   var container = '';
 
   /**
@@ -29,7 +28,6 @@ var nav = (function() {
     callback();
   }
 
-  // public
   return {
     /**
      * Sets the container which will recieve loaded file content.
@@ -71,6 +69,8 @@ var nav = (function() {
      * @return {[type]}            [description]
      */
     loadFile: function (src, callback) {
+      var self = this;
+      
       if (typeof callback != 'function') {
         callback = function () {};
       }
@@ -81,7 +81,11 @@ var nav = (function() {
           return;
         }
 
-        updateContent(data, callback);
+        updateContent(data, function (error) {
+          callback(error);
+
+          self.reloadModule('common');
+        });
       });
     },
 

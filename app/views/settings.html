@@ -13,86 +13,86 @@
         <div class="panel-body">
           <div class="form-group">
             <label for="vagrant_ip">Virtual machine IP address</label>
-            <input class="form-control" id="vagrant_ip" placeholder="192.168.1.88">
+            <input class="form-control" name="vagrant_ip" placeholder="192.168.1.88">
           </div>
           <div class="form-group">
             <label for="vagrant_hostname">Default hostname</label>
-            <input class="form-control" id="vagrant_hostname" placeholder="drupalvm.dev">
+            <input class="form-control" name="vagrant_hostname" placeholder="drupalvm.dev">
           </div>
           <div class="form-group">
             <label for="vagrant_synced_folders">Local files</label>
-            <input class="form-control" id="vagrant_synced_folders" placeholder="~/Sites/drupalvm">
+            <input class="form-control" name="vagrant_synced_folders" placeholder="~/Sites/drupalvm">
           </div>
           <div class="form-group">
             <label for="vagrant_memory">VM memory</label>
             <div class="input-group">
-            <input class="form-control" id="vagrant_memory" placeholder="1024"><div class="input-group-addon">MBs</div>
+            <input class="form-control" name="vagrant_memory" placeholder="1024"><div class="input-group-addon">MBs</div>
             </div>
           </div>
           <div class="form-group">
             <label for="vagrant_cpus">VM CPUs</label>
-            <input class="form-control" id="vagrant_cpus" placeholder="2">
+            <input class="form-control" name="vagrant_cpus" placeholder="2">
           </div>
           <label>File sync method</label><br>
-          <div class="btn-group" data-toggle="buttons">
-            <label class="btn btn-primary active" id="drupalvm_settings_filesync_default">
-              <input type="radio" name="options" autocomplete="off" checked> Default
+          <div class="btn-group" data-toggle="buttons" id="filesync_method">
+            <label class="btn btn-primary active">
+              <input type="radio" name="filesync_method" value="default" autocomplete="off" checked> Default
             </label>
-            <label class="btn btn-primary" id="drupalvm_settings_filesync_rsync">
-              <input type="radio" name="options" autocomplete="off"> Rsync
+            <label class="btn btn-primary">
+              <input type="radio" name="filesync_method" value="rsync" autocomplete="off"> Rsync
             </label>
-            <label class="btn btn-primary" id="drupalvm_settings_filesync_nfs">
-              <input type="radio" name="options" autocomplete="off"> NFS
+            <label class="btn btn-primary">
+              <input type="radio" name="filesync_method" value="nfs" autocomplete="off"> NFS
             </label>
           </div>
         </div>
       </div>
 
-      <div class="panel panel-default" id="drupalvm_settings_installedextras">
+      <div class="panel panel-default" id="installed_extras">
         <div class="panel-heading">
           <h3 class="panel-title">Installed Extras</h3>
         </div>
 
         <div class="panel-body">
-          <em>Note: reflects config file, but does not save changes yet</em>
           <div class="checkbox">
-            <label><input type="checkbox" id="drupalvm_settings_adminer"> Adminer</label>
+            <label><input type="checkbox" name="installed_extras" value="adminer"> Adminer</label>
           </div>
           <div class="checkbox">
-            <label><input type="checkbox" id="drupalvm_settings_mailhog"> MailHog</label>
+            <label><input type="checkbox" name="installed_extras" value="mailhog"> MailHog</label>
           </div>
           <div class="checkbox">
-            <label><input type="checkbox" id="drupalvm_settings_memcached"> Memcached</label>
+            <label><input type="checkbox" name="installed_extras" value="memcached"> Memcached</label>
           </div>
           <div class="checkbox">
-            <label><input type="checkbox" id="drupalvm_settings_nodejs"> NodeJS</label>
+            <label><input type="checkbox" name="installed_extras" value="nodejs"> NodeJS</label>
           </div>
           <div class="checkbox">
-            <label><input type="checkbox" id="drupalvm_settings_pimpmylog"> PimpMyLog</label>
+            <label><input type="checkbox" name="installed_extras" value="pimpmylog"> PimpMyLog</label>
           </div>
           <div class="checkbox">
-            <label><input type="checkbox" id="drupalvm_settings_ruby"> Ruby</label>
+            <label><input type="checkbox" name="installed_extras" value="ruby"> Ruby</label>
           </div>
           <div class="checkbox">
-            <label><input type="checkbox" id="drupalvm_settings_selenium"> Selenium</label>
+            <label><input type="checkbox" name="installed_extras" value="selenium"> Selenium</label>
           </div>
           <div class="checkbox">
-            <label><input type="checkbox" id="drupalvm_settings_solr"> Solr</label>
+            <label><input type="checkbox" name="installed_extras" value="solr"> Solr</label>
           </div>
           <div class="checkbox">
-            <label><input type="checkbox" id="drupalvm_settings_varnish"> Varnish</label>
+            <label><input type="checkbox" name="installed_extras" value="varnish"> Varnish</label>
           </div>
           <div class="checkbox">
-            <label><input type="checkbox" id="drupalvm_settings_xdebug"> XDebug</label>
+            <label><input type="checkbox" name="installed_extras" value="xdebug"> XDebug</label>
           </div>
           <div class="checkbox">
-            <label><input type="checkbox" id="drupalvm_settings_xhprof"> XHProf</label>
+            <label><input type="checkbox" name="installed_extras" value="xhprof"> XHProf</label>
           </div>
         </div>
       </div>
 
-      <div id="drupalVMReset">
-      <button type="button" class="btn btn-warning">Reset settings</button>
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="save_settings">Save</button>
+        <button type="button" class="btn btn-danger" id="reset_settings">Reset</button>
       </div>
     </form>
 </div>

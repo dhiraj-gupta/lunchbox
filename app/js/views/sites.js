@@ -1,7 +1,7 @@
-$(document).ready(function () {
-  console.log('loaded');
+var settings = window.lunchbox.settings;
 
-  var settings = window['lunchbox_settings'];
+$(document).ready(function () {
+  console.log('loaded sites.js via /views/sites.html');
 
   $('#drupalvmSites').html("");
 
@@ -186,4 +186,79 @@ function createSiteGit(dir, projectGitUrl, composer){
       runComposer(dir);
     }
   });
+}
+
+function runComposer(dir) {
+  var spawn = require('child_process').spawn;
+  var child = spawn('composer',
+    [
+      'install',
+      '--working-dir=' + dir,
+      '-n',
+      '-vvv',
+      '--dev'
+    ]);
+
+  var dialog = require('components/dialog').create('Running composer...');
+  dialog.logProcess(child);
+}
+
+function promptDeleteDetails(projectName) {
+  //TODO: Prompt to ask how much of the record to delete
+  var deleteSettings = {
+    "removeDirectory": true,
+    "removeApacheVhost": true,
+    "removeDatabase": true
+  }
+
+  bootbox.dialog({
+    title: "Delete site: " + projectName,
+    message: 'This will delete:'
+      + '<ul>'
+      + '<li>apache vhost</li>'
+      + '<li>database</li>'
+      + '<li>site directory and files</li>'
+      + '</ul>',
+    buttons: {
+      success: {
+        label: "Cancel",
+        className: "btn-default",
+        callback: function () {
+          // Do nothing.
+        }
+      },
+      delete: {
+        label: "Delete",
+        className: "btn-danger",
+        callback: function () {
+          deleteSite(projectName, deleteSettings);
+        }
+      }
+    }
+  });
+}
+
+function deleteSite(projectName, deleteSettings) {
+  // Remove apache vhost entry
+  if(deleteSettings.removeDirectory) {
+    //TODO:
+  }
+
+  if(deleteSettings.removeApacheVhost) {
+    for(var x in settings.vm.config.apache_vhosts) {
+      var servername = settings.vm.config.apache_vhosts[x].servername;
+      var name = servername.split(".")[0];
+      if(name == projectName) {
+        settings.vm.config.apache_vhosts.splice(x, 1);
+      }
+    }
+  }
+
+  if(deleteSettings.removeDatabase) {
+    //TODO:
+  }
+
+  saveConfigFile();
+
+  $('#menu_drupalvm_sites a').click();
 }

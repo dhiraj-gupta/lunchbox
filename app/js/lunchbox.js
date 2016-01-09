@@ -4,25 +4,104 @@ var bootbox = require('bootbox');
 var Q = require('q');
 var os = require('os');
 
+/***************************************************************
+    Global items for access from all modules / files
+***************************************************************/
+
+// container for lunchbox data
+window.lunchbox = {
+  settings: {
+    vm: {
+      needs_reprovision: false,
+      config: {}
+    },
+  },
+};
+
 /**
- * Global helper to load custom modules. Alleviates the need to provide a
+ * Helper to load custom modules. Alleviates the need to provide a
  * relative filepath when loading a custom module from somewhere other than 
  * a file in /app/
  * 
  * @param  {[type]} src [description]
  * @return {[type]}     [description]
  */
-window['load_mod'] = function (src) {
+window.load_mod = function (src) {
   return require('./' + src + '.js');
 }
+
+/**
+ * Callback for storage.save()
+ * 
+ * @param  {[type]} error [description]
+ * @param  {[type]} data  [description]
+ * @return {[type]}       [description]
+ */
+window.storage_save_callback = function (error, data) {
+  if (error !== null) {
+    console.log('Error: ' + error);
+    return;
+  }
+
+  window.lunchbox.settings = data;
+};
+
+/**
+ * Updates reprovision status in settings.
+ * 
+ * @param {[type]}   status   [description]
+ * @param {Function} callback [description]
+ */
+window.set_reprovision_status = function (status, callback) {
+  callback = callback || function () {};
+
+  window.lunchbox.settings.vm.needs_reprovision = true;
+  // console.log('in set_reprovision_status');
+  // console.log(window.lunchbox.settings);
+  storage.save(window.lunchbox.settings, function (error, data) {
+    storage_save_callback(error, data);
+
+    if (error !== null) {
+      return;
+    }
+
+    // console.log('callback time');
+    // console.log(window.lunchbox.settings);
+
+    callback();
+  });
+}
+
+/**
+ * Shows alert to reprovision the vm
+ * 
+ * @return {[type]} [description]
+ */
+window.show_reprovision_notice = function () {
+  set_reprovision_status(true, function () {
+    $('#reprovisionAlert').show('fast');
+  });
+}
+
+/**
+ * Hides alert to reprovision the vm
+ * 
+ * @return {[type]} [description]
+ */
+window.hide_reprovision_notice = function () {
+  set_reprovision_status(false, function () {
+    $("#reprovisionAlert").hide("fast");
+  });
+}
+
+
+// shortcut reference
+var settings = window.lunchbox.settings;
 
 var qc = load_mod('tools/qchain');
 var storage = load_mod('internal/storage');
 var nav = load_mod('components/nav');
 
-var settings = {};
-
-var drupalvm_needsprovision = false;
 var drupalvm_running = false;
 
 var DRUPALVM_START = "start";
@@ -52,12 +131,12 @@ $(document).ready(function () {
     ]
   });
 
-  operations.push({
-    op: checkPrerequisites,
-    args: [
-      dialog
-    ]
-  });
+  // operations.push({
+  //   op: checkPrerequisites,
+  //   args: [
+  //     dialog
+  //   ]
+  // });
 
   operations.push({
     op: detectDrupalVM,
@@ -119,14 +198,6 @@ $(document).ready(function () {
 
 // ------ Event Hookups ------ //
 
-$("#menu_drupalvm_tools").click(function () {
-  drupalvmBuildTools();
-});
-
-$("#menu_drupalvm_settings").click(function () {
-  drupalvmBuildSettings();
-});
-
 $("#provisionLink").click(function () {
   if(drupalvm_running) {
     controlVM(DRUPALVM_PROVISION);
@@ -155,63 +226,6 @@ $("#drupalvm_provision").click(function () {
   }
 });
 
-$("#vagrant_ip").change(function () {
-  saveVMSettings("vagrant_ip");
-});
-
-$("#vagrant_hostname").change(function () {
-  saveVMSettings("vagrant_hostname");
-});
-
-$("#vagrant_synced_folders").change(function () {
-  saveVMSettings("vagrant_synced_folders");
-});
-
-$("#vagrant_memory").change(function () {
-  saveVMSettings("vagrant_memory");
-});
-
-$("#vagrant_cpus").change(function () {
-  saveVMSettings("vagrant_cpus");
-});
-
-$("#drupalvm_settings_filesync_default").click(function () {
-  saveFileSyncType("");
-})
-
-$("#drupalvm_settings_filesync_rsync").click(function () {
-  saveFileSyncType("rsync");
-})
-
-$("#drupalvm_settings_filesync_nfs").click(function () {
-  saveFileSyncType("nfs");
-})
-
-$("#btnAdminer").click(function () {
-  shell.openExternal('http://adminer.drupalvm.dev');
-})
-
-$("#btnPimpMyLog").click(function () {
-  shell.openExternal('http://pimpmylog.drupalvm.dev');
-})
-
-$("#btnXHProf").click(function () {
-  shell.openExternal('http://xhprof.drupalvm.dev');
-})
-
-
-
-
-$("#drupalVMReset>button").click(function () {
-  bootbox.confirm("Reset all settings?", function (result) {
-    if(result) {
-      drupalVMResetSettings();
-    }
-  });
-});
-
-// ------ Event Handlers ------ //
-
 /**
  * Loads & parses settings.json into the `settings` object.
  * 
@@ -228,7 +242,9 @@ function loadSettings(dialog) {
       deferred.reject(error);
     }
 
-    window['lunchbox_settings'] = settings = data;
+    if (data != null) {
+      window.lunchbox.settings = data;
+    }
 
     deferred.resolve();
   });
@@ -522,14 +538,15 @@ function detectDrupalVM(dialog) {
 
       // Sample: d21e8e6  drupalvm virtualbox poweroff /home/nate/Projects/drupal-vm
       if (parts.length >= 5 && parts[1] == 'drupalvm') {
-        settings.vm = {};
-        settings.vm.id = parts[0];
-        settings.vm.name = parts[1];
-        settings.vm.state = parts[3];
-        settings.vm.home = parts[4];
+        window.lunchbox.settings.vm = {};
+        window.lunchbox.settings.vm.id = parts[0];
+        window.lunchbox.settings.vm.name = parts[1];
+        window.lunchbox.settings.vm.state = parts[3];
+        window.lunchbox.settings.vm.home = parts[4];
 
-        var config_file = settings.vm.home + '/config.yml';
-        settings.vm.config = yaml.load(config_file);
+        var config_file = window.lunchbox.settings.vm.home + '/config.yml';
+        window.lunchbox.settings.vm.config = yaml.load(config_file);
+
         storage.save(settings);
 
         deferred.resolve();
@@ -586,7 +603,6 @@ function updateVMStatus(dialog) {
 }
 
 function drupalVMProcessing(modalTitle) {
-
   var contents = "<div class='progress'>";
   contents+= "<div class='progress-bar progress-bar-striped active' role=progressbar' aria-valuenow='100' aria-valuemin='0' aria-valuemax='100' style='width: 100%''>";
   contents+= "<span class='sr-only'>100% Complete</span>";
@@ -632,232 +648,32 @@ function controlVM(action) {
   var spawn = require('child_process').spawn;
   var child = spawn('vagrant', [cmd, settings.vm.id]);
 
-  var dialog = require('components/dialog').create(title);
+  var dialog = load_mod('components/dialog').create(title);
   dialog.logProcess(child);
 
   child.on('exit', function (exitCode) {
     switch(action) {
       case DRUPALVM_START:
-        if (drupalvm_needsprovision) {
-          controlVM(DRUPALVM_PROVISION);
-        }
-        else {
+        if (!window.lunchbox.settings.vm.needs_reprovision) {
           updateVMStatus(dialog);
+          return;
         }
+
+        controlVM(DRUPALVM_PROVISION);
+
         break;
 
       case DRUPALVM_STOP:
       case DRUPALVM_RELOAD:
         updateVMStatus(dialog);
+
         break;
 
       case DRUPALVM_PROVISION:
-        drupalvm_needsprovision = false;
-        $("#reprovisionAlert").hide("fast");
+        hide_reprovision_notice();
         updateVMStatus(dialog);
+
         break;
     }
   });
-}
-
-/**
- * Deactivates active menu links and hides all DOM sections.
- * 
- * @return {[type]} [description]
- */
-function drupalvmHidePanels() {
-  // hide all sections
-  $('.main .drupalvm_section').hide();
-  $('.sidebar li').removeClass('active');
-}
-
-function drupalvmBuildTools() {
-  drupalvmHidePanels();
-  $("#menu_drupalvm_tools").addClass("active");
-  $("#panel_drupalvm_tools").fadeIn();
-}
-
-
-
-
-
-function runComposer(dir) {
-  var spawn = require('child_process').spawn;
-  var child = spawn('composer',
-    [
-      'install',
-      '--working-dir=' + dir,
-      '-n',
-      '-vvv',
-      '--dev'
-    ]);
-
-  var dialog = require('components/dialog').create('Running composer...');
-  dialog.logProcess(child);
-}
-
-function promptDeleteDetails(projectName) {
-  //TODO: Prompt to ask how much of the record to delete
-  var deleteSettings = {
-    "removeDirectory": true,
-    "removeApacheVhost": true,
-    "removeDatabase": true
-  }
-
-  bootbox.dialog({
-    title: "Delete site: " + projectName,
-    message: 'This will delete:'
-      + '<ul>'
-      + '<li>apache vhost</li>'
-      + '<li>database</li>'
-      + '<li>site directory and files</li>'
-      + '</ul>',
-    buttons: {
-      success: {
-        label: "Cancel",
-        className: "btn-default",
-        callback: function () {
-          // Do nothing.
-        }
-      },
-      delete: {
-        label: "Delete",
-        className: "btn-danger",
-        callback: function () {
-          deleteSite(projectName, deleteSettings);
-        }
-      }
-    }
-  });
-}
-
-
-function deleteSite(projectName, deleteSettings) {
-  // Remove apache vhost entry
-  if(deleteSettings.removeDirectory) {
-    //TODO:
-  }
-
-  if(deleteSettings.removeApacheVhost) {
-    for(var x in settings.vm.config.apache_vhosts) {
-      var servername = settings.vm.config.apache_vhosts[x].servername;
-      var name = servername.split(".")[0];
-      if(name == projectName) {
-        settings.vm.config.apache_vhosts.splice(x, 1);
-      }
-    }
-  }
-
-  if(deleteSettings.removeDatabase) {
-    //TODO:
-  }
-
-  saveConfigFile();
-  drupalvmBuildSitesList();
-}
-
-
-
-
-function drupalvmBuildSettings() {
-  drupalvmHidePanels();
-
-  // IP address
-  $("#vagrant_ip").val(settings.vm.config.vagrant_ip);
-
-  // Hostname
-  $("#vagrant_hostname").val(settings.vm.config.vagrant_hostname);
-
-  // Local files
-  $("#vagrant_synced_folders").val(settings.vm.config.vagrant_synced_folders[0].local_path);
-
-  // Memory
-  $("#vagrant_memory").val(settings.vm.config.vagrant_memory);
-
-  // CPUs
-  $("#vagrant_cpus").val(settings.vm.config.vagrant_cpus);
-
-  // VM file sync mechanism
-  var file_sync_type = settings.vm.config.vagrant_synced_folders[0].type;
-  switch(file_sync_type) {
-    case "rsync":
-      $("#drupalvm_settings_filesync_rsync").button('toggle');
-      break;
-
-    case "nfs":
-      $("#drupalvm_settings_filesync_nfs").button('toggle');
-      break;
-
-    default:
-      $("#drupalvm_settings_filesync_default").button('toggle');
-  }
-
-  // Installed extras
-  $('#drupalvm_settings_installedextras input').prop('checked', false); // reset
-  var installed_extras = settings.vm.config.installed_extras;
-  for(x in installed_extras) {
-    var extra = installed_extras[x];
-    $('#drupalvm_settings_' + extra).prop('checked', true);
-  }
-
-  $("#menu_drupalvm_settings").addClass("active");
-  $("#panel_drupalvm_settings").fadeIn();
-}
-
-
-function saveVMSettings(el) {
-  switch(el) {
-    case "vagrant_ip":
-      settings.vm.config.vagrant_ip = $("#vagrant_ip").val();
-      break;
-
-    case "vagrant_hostname":
-      settings.vm.config.vagrant_hostname = $("#vagrant_hostname").val();
-      break;
-
-    case "vagrant_memory":
-      settings.vm.config.vagrant_memory = parseInt($("#vagrant_memory").val());
-      break;
-
-    case "vagrant_cpus":
-      settings.vm.config.vagrant_cpus = parseInt( $("#vagrant_cpus").val() );
-      break;
-
-    case "vagrant_synced_folders":
-      settings.vm.config.vagrant_synced_folders[0].local_path = $("#vagrant_synced_folders").val();
-      break;
-  }
-  saveConfigFile();
-}
-
-
-function saveFileSyncType(file_sync_type) {
-  // Only update if the value is actually different.
-  if(file_sync_type != settings.vm.config.vagrant_synced_folders[0].type) {
-    settings.vm.config.vagrant_synced_folders[0].type = file_sync_type;
-    saveConfigFile();
-  }
-}
-
-
-function saveConfigFile() {
-  yamlString = YAML.stringify(settings.vm.config, 2);
-  var fs = require('fs');
-  fs.writeFile(settings.vm.home + '/config.yml', yamlString, function (err) {
-    if(err) {
-      return console.log(err);
-    }
-  });
-  drupalvm_needsprovision = true;
-  $("#reprovisionAlert").show("fast");
-}
-
-
-
-function drupalVMResetSettings() {
-  var config_file = settings.vm.home + '/example.config.yml';
-  settings.vm.config = yaml.load(config_file);
-  saveConfigFile();
-
-  drupalvmBuildSettings();
 }
