@@ -56,17 +56,13 @@ window.set_reprovision_status = function (status, callback) {
   callback = callback || function () {};
 
   window.lunchbox.settings.vm.needs_reprovision = true;
-  // console.log('in set_reprovision_status');
-  // console.log(window.lunchbox.settings);
+
   storage.save(window.lunchbox.settings, function (error, data) {
     storage_save_callback(error, data);
 
     if (error !== null) {
       return;
     }
-
-    // console.log('callback time');
-    // console.log(window.lunchbox.settings);
 
     callback();
   });

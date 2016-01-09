@@ -7,8 +7,6 @@ var yaml    = require('yamljs');
 var qc      = load_mod('tools/qchain');
 var storage = load_mod('internal/storage');
 
-
-
 /**
  * Boot tasks.
  */
@@ -75,7 +73,7 @@ module.exports = (function () {
           deferred.reject(error);
         }
 
-        if (data != null) {
+        if (data !== null) {
           window.lunchbox.settings = data;
         }
 
