@@ -7,7 +7,7 @@ var app = remote.require('app');
 var public_path = app.getAppPath() + '/app';
 
 /**
- * Module for loading/updating maing content from files.
+ * Module for loading/updating main content from files.
  */
 var nav = (function() {
   var container = '';
