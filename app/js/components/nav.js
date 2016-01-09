@@ -7,7 +7,7 @@ var app = remote.require('app');
 var public_path = app.getAppPath() + '/app';
 
 /**
- * Module for managing Bootbox dialogs.
+ * Module for loading/updating maing content from files.
  */
 var nav = (function() {
   var container = '';
