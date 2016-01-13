@@ -1,3 +1,5 @@
+var storage = load_mod('internal/storage');
+
 var settings = window.lunchbox.settings;
 
 $(document).ready(function () {
@@ -163,7 +165,7 @@ function createNewSite(name, gitUrl, composer, webroot) {
   newDatabase.collation = "utf8_general_ci";
   settings.vm.config.mysql_databases.push(newDatabase);
 
-  saveConfigFile();
+  storage.save(settings);
 
   $('#menu_drupalvm_sites a').click();
 }
@@ -258,7 +260,7 @@ function deleteSite(projectName, deleteSettings) {
     //TODO:
   }
 
-  saveConfigFile();
+  storage.save(settings);
 
   $('#menu_drupalvm_sites a').click();
 }
