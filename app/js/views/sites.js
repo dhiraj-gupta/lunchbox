@@ -126,7 +126,7 @@ function collectNewSiteDetails() {
         callback: function () {
           var name = $('#project_name').val();
           var git_url = $('#project_git_url').val();
-          var composer = $("input[name='project_composer']:checked").val()
+          var composer = $("input[name='project_composer']:checked").val() == 'true' ? true : false;
           var webroot = $('#project_webroot').val();
           createNewSite(name.toLowerCase(), git_url, composer, webroot);
         }
@@ -197,8 +197,8 @@ function runComposer(dir) {
       'install',
       '--working-dir=' + dir,
       '-n',
-      '-vvv',
-      '--dev'
+      '-vvv'
+      // '--dev' // commented out as this is deprecated
     ]);
 
   var dialog = load_mod('components/dialog').create('Running composer...');
