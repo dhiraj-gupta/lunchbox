@@ -174,7 +174,7 @@ function createSiteGit(dir, projectGitUrl, composer){
     ['clone', projectGitUrl, dir]);
 
   var stdout = '';
-  var dialog = require('components/dialog').create('Cloning from git ...');
+  var dialog = load_mod('components/dialog').create('Cloning from git ...');
   dialog.logProcess(child, function (output) {
     stdout += output;
   });
@@ -199,7 +199,7 @@ function runComposer(dir) {
       '--dev'
     ]);
 
-  var dialog = require('components/dialog').create('Running composer...');
+  var dialog = load_mod('components/dialog').create('Running composer...');
   dialog.logProcess(child);
 }
 
