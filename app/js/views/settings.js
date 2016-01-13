@@ -1,9 +1,11 @@
 var storage = load_mod('internal/storage');
 
-var settings = window.lunchbox.settings;
+var settings = null;
 
 $(document).ready(function () {
   console.log('loaded settings.js via /views/settings.html');
+
+  settings = window.lunchbox.settings;
 
   // populate settings vm form
   var vagrant_ip = $("input[name=vagrant_ip]");
