@@ -1,9 +1,11 @@
 var storage = load_mod('internal/storage');
 
-var settings = window.lunchbox.settings;
+var settings = null;
 
 $(document).ready(function () {
   console.log('loaded sites.js via /views/sites.html');
+
+  settings = window.lunchbox.settings;
 
   $('#drupalvmSites').html("");
 
