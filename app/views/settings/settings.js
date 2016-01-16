@@ -64,6 +64,8 @@ $(document).ready(function () {
         enabled: 0 // disabled by default
       };
 
+      // TODO: ensure filepath doesn't exist
+
       var spawn = require('child_process').spawn;
       var child = spawn('git', ['clone', git_value.href, settings.plugins_path + '/' + name_value]);
 

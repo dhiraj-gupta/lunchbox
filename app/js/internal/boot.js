@@ -143,12 +143,12 @@ module.exports = (function () {
      */
     checkPlugins: function (dialog) {
       var chain = Q.fcall(function (){});
-
+      
       // no plugins present
       if (!window.lunchbox.plugins.length) {
         return chain;
       }
-
+      
       // build a promise chain where each link handles a single plugin
       var found_plugins = [];
       window.lunchbox.plugins.forEach(function (plugin) {
