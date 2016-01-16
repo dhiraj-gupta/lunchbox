@@ -1,6 +1,7 @@
 'use strict';
 
 var os      = require('os');
+var fs      = require('fs');
 var Q       = require('q');
 var yaml    = require('yamljs');
 
@@ -22,65 +23,166 @@ module.exports = (function () {
       var nav = load_mod('components/nav');
       nav.setContainer('#view-wrap');
 
-      qc.add(function () {
-        var deferred = qc.defer();
+      var deferred = qc.defer();
 
-        var items = [];
+      var items = [];
 
-        $('nav a').each(function (i, el) {
-          el = $(el);
-          items.push(el);
+      $('nav a').each(function (i, el) {
+        el = $(el);
+        items.push(el);
 
-          if (el.attr('href') != '#') {
-            nav.addNavItem(el, function (err) {
-              if (err) {
-                console.log('error: ' + err);
-                return;
-              }
+        if (el.attr('href') != '#') {
+          nav.addNavItem(el, function (err) {
+            if (err) {
+              console.log('error: ' + err);
+              return;
+            }
 
-              // remove 'active' class from all nav items
-              items.forEach(function (item, i) {
-                $(item).parent().removeClass('active');
-              });
-
-              // add 'active' class to clicked nav item
-              el.parent().addClass('active');
+            // remove 'active' class from all nav items
+            items.forEach(function (item, i) {
+              $(item).parent().removeClass('active');
             });
-          }
-        });
 
-        deferred.resolve();
-        
-        return deferred.promise;
+            // add 'active' class to clicked nav item
+            el.parent().addClass('active');
+          });
+        }
       });
 
-      return qc.chain();
+      deferred.resolve();
+      
+      return deferred.promise;
     },
 
     /**
-     * Loads & parses settings.yaml into the `window.lunchbox.settings` object.
+     * Loads & parses settings.yaml into the `window.lunchbox` object.
      * 
      * @param  {[type]} dialog [description]
      * @return {[type]}        [description]
      */
     loadSettings: function (dialog) {
-      var deferred = qc.defer();
+      var deferred = Q.defer();
 
       dialog.append('Loading Lunchbox settings.' + os.EOL);
-      
+
       storage.load(function (error, data) {
         if (error !== null) {
           deferred.reject(error);
         }
 
-        if (data !== null) {
-          window.lunchbox.settings = data;
+        if (data == null) {
+          data = {};
         }
+
+        if (typeof data.plugins == 'undefined') {
+          data.plugins = [];
+        }
+
+        if (typeof data.views == 'undefined') {
+          data.views = {
+            dashboard: {},
+            settings: {}
+          };
+        }
+
+        var remote = require('remote');
+        var app = remote.require('app');
+        data.user_data_path = app.getPath('userData');
+        data.plugins_path = data.user_data_path + '/plugins';
+
+        window.lunchbox = data;
 
         deferred.resolve();
       });
 
       return deferred.promise;
+    },
+
+    /**
+     * Checks for presense of plugins directory; creates it if missing.
+     * @param  {[type]} dialog [description]
+     * @return {[type]}        [description]
+     */
+    checkPluginsDir: function (dialog) {
+      var deferred = Q.defer();
+
+      dialog.append('Checking for plugins.' + os.EOL);
+
+      fs.stat(window.lunchbox.plugins_path, function (error, stats) {
+        if (error || !stats.isDirectory()) {
+          dialog.append('Plugins directory not found; attepting to create.' + os.EOL);
+
+          var mode = parseInt('0700', 8);
+          fs.mkdir(window.lunchbox.plugins_path, mode, function (error) {
+            if (error) {
+              deferred.reject('Could not create plugins directory: ' + window.lunchbox.plugins_path);
+
+              return;
+            }
+
+            dialog.append('Created plugins directory: ' + window.lunchbox.plugins_path + '.' + os.EOL);
+            deferred.resolve();
+          });
+
+          return;
+        }
+
+        dialog.append('Found plugins directory: ' + window.lunchbox.plugins_path + '.' + os.EOL);
+        deferred.resolve();
+      });
+
+      return deferred.promise;
+    },
+
+    /**
+     * Ensures all plugins in window.lunchbox.plugins have codebases, and match Lunchbox
+     * plugin requirements.
+     * 
+     * @param  {[type]} dialog [description]
+     * @return {[type]}        [description]
+     */
+    checkPlugins: function (dialog) {
+      var chain = Q.fcall(function (){});
+
+      // no plugins present
+      if (!window.lunchbox.plugins.length) {
+        return chain;
+      }
+
+      // build a promise chain where each link handles a single plugin
+      var found_plugins = [];
+      window.lunchbox.plugins.forEach(function (plugin) {
+        var link = function () {
+          var deferred = Q.defer();
+
+          fs.stat(plugin.path, function (error, stats) {
+            dialog.append('Checking plugin: ' + plugin.name_nice + '.' + os.EOL);
+            
+            // plugin files found, so save this plugin to the "found" array
+            if (!error && stats.isDirectory()) {
+              found_plugins.push(plugin);
+              deferred.resolve();
+              return;
+            }
+            
+            dialog.append('Plugin files not found in ' + plugin.path + '. Removing plugin.' + os.EOL);
+            deferred.resolve();
+          });
+          
+          return deferred.promise;
+        }
+        
+        chain = chain.then(link);
+      });
+      
+      // now that we've checked all plugins, update the plugin object with the
+      // array of found plugins
+      chain = chain.then(function () {
+        window.lunchbox.plugins = found_plugins;
+        storage.save(window.lunchbox, storage_save_callback);
+      });
+      
+      return chain;
     },
 
     /**

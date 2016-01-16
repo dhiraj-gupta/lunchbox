@@ -1,3 +1,161 @@
+html {
+  height: 100%;
+}
+
+body {
+  .no-mp;
+}
+
+/************************************************
+            Layout
+************************************************/
+#wrapper {
+  .row {
+
+  }
+}
+
+  nav {
+    ul.nav {
+      &:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+      }
+
+      border-bottom: 1px #ccc solid;
+      margin: 0 -15px 20px -15px;
+      padding-bottom: 20px;
+
+      li {
+        &.title {
+          font-weight: bold;
+          padding: 10px 15px;
+        }
+
+        a {
+          &:hover,
+          &:focus {
+            color: #fff;
+            background-color: #428bca;
+          }
+        }
+
+        & + li {
+          margin-top: 0;
+        }
+      }
+    }
+  }
+
+  #main {
+    padding: 20px;
+
+    .page-header {
+      margin-top: 0;
+    }
+  }
+
+    #global-notices {
+
+    }
+
+    #view-wrap {
+
+    }
+ 
+/************************************************
+            Large Components
+************************************************/
+
+form.lunchbox {
+  margin-bottom: 20px;
+
+  .input-required {
+    color: #ff0000;
+  }
+
+  .actions {
+    padding-top: 10px;
+  }
+}
+
+/************************************************
+            Elements
+************************************************/
+
+/**
+ * Floating alerts.
+ */
+.floating-alert {
+  padding: 5px 10px;
+  position: absolute;
+  z-index: 999;
+}
+
+#lunchbox-dashboard-boot-log {
+  .panel-body {
+    .force-scrollbar;
+
+    background: #fbfbfb;
+    font-size: 0.9em;
+    max-height: 205px;
+    overflow-y: scroll;
+    white-space: pre;
+
+    &:before,
+    &:after {
+      display: none;
+    }
+  }
+}
+
+/************************************************
+            Media Queries
+************************************************/
+@media (min-width: 768px) {
+ #main {
+   padding-right: 40px;
+   padding-left: 40px;
+ }
+}
+
+/************************************************
+            Mixins
+************************************************/
+.no-mp {
+  margin: 0;
+  padding: 0;
+}
+
+/* force display of scrollbars (when scrolling is present) on OSX */
+.force-scrollbar {
+  &::-webkit-scrollbar {
+    -webkit-appearance: none;
+
+    &:horizontal {
+      height: 11px;
+    }
+
+    &:vertical {
+      width: 11px;
+    }
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 8px;
+    border: 2px solid white;
+    background-color: rgba(0, 0, 0, .5);
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: inherit; 
+    border-radius: 10px; 
+  }
+}
+
+/************************************************
+            NEEDS CLEANUP
+************************************************/
 
 #processingLog pre, pre.processingLog {
   color: #333333;
@@ -95,12 +253,6 @@
 }
 
  /*
-  * Base structure
-  */
-
-
-
- /*
   * Global add-ons
   */
 
@@ -139,42 +291,6 @@
      border-right: 1px solid #eee;
    }
  }
-
- /* Sidebar navigation */
- .nav-sidebar {
-   margin-right: -21px; /* 20px padding + 1px border */
-   margin-bottom: 20px;
-   margin-left: -20px;
- }
- .nav-sidebar > li > a {
-   padding-right: 20px;
-   padding-left: 20px;
- }
- .nav-sidebar > .active > a,
- .nav-sidebar > .active > a:hover,
- .nav-sidebar > .active > a:focus {
-   color: #fff;
-   background-color: #428bca;
- }
-
-
- /*
-  * Main content
-  */
-
- .main {
-   padding: 20px;
- }
- @media (min-width: 768px) {
-   .main {
-     padding-right: 40px;
-     padding-left: 40px;
-   }
- }
- .main .page-header {
-   margin-top: 0;
- }
-
 
  /*
   * Placeholder dashboard ideas

@@ -1,6 +1,7 @@
 "use strict";
 
 var fs = require('fs');
+var Q = require('q');
 
 var remote = require('remote');
 var app = remote.require('app');
@@ -11,6 +12,8 @@ var public_path = app.getAppPath() + '/app';
  */
 var nav = (function() {
   var container = '';
+
+  var menu_items = [];
 
   /**
    * Updates the container with given data.
@@ -53,6 +56,11 @@ var nav = (function() {
       var self = this;
       el = $(el);
 
+      // track item for name-based access later on
+      // if (var name = el.attr('lunchbox-name')) {
+      //   menu_items.name = el;
+      // }
+
       el.off('click');
 
       el.click(function (e) {
@@ -60,6 +68,12 @@ var nav = (function() {
 
         self.loadFile(el.attr('href'), callback);
       });
+    },
+
+    loadByName: function (name) {
+      if (typeof menu_items.name !== 'undefined') {
+        menu_items.name.click();
+      }
     },
 
     /**
@@ -75,16 +89,38 @@ var nav = (function() {
         callback = function () {};
       }
 
-      fs.readFile(public_path + '/' + src, function (err, data) {
+      var filepath = public_path + '/' + src;
+      fs.readFile(filepath, function (err, data) {
         if (err) {
           callback('Could not load ' + src);
           return;
         }
 
+        // if we loaded an html file, try to find a matching JS file
+        var check_js_file = Q.defer();
+
+        var matches = filepath.match(/(.+)\.html|\.htm$/);
+        if (matches && matches.length == 2) {
+          var js_filepath = matches[1] + '.js';
+          fs.stat(js_filepath, function (error, stats) {
+            if (error) {
+              check_js_file.reject();
+              return;
+            }
+
+            check_js_file.resolve(js_filepath);
+          });
+        }
+
         updateContent(data, function (error) {
           callback(error);
 
-          self.reloadModule('common');
+          check_js_file.promise.then(function (path) {
+            self.reloadModule(path);
+            self.reloadModule('common');
+          }).catch(function (error) {
+            self.reloadModule('common');
+          });
         });
       });
     },
@@ -95,11 +131,17 @@ var nav = (function() {
      * @return {[type]}     [description]
      */
     reloadModule: function (src) {
-      var src = '../' + src + '.js';
+      var path = src;
+
+      var matches = path.match(/^\/(.+)\.js$/);
+      if (!matches) {
+        path = require.resolve('../' + path + '.js');
+      }
+
       // invalidate cache
-      delete require.cache[require.resolve(src)];
+      delete require.cache[path];
       // load file
-      require(src);
+      require(path);
     }
   };
 })();

@@ -9,14 +9,7 @@ var os = require('os');
 ***************************************************************/
 
 // container for lunchbox data
-window.lunchbox = {
-  settings: {
-    vm: {
-      needs_reprovision: false,
-      config: {}
-    },
-  },
-};
+window.lunchbox = {};
 
 /**
  * Helper to load custom modules. Alleviates the need to provide a
@@ -43,7 +36,7 @@ window.storage_save_callback = function (error, data) {
     return;
   }
 
-  window.lunchbox.settings = data;
+  window.lunchbox = data;
 };
 
 /**
@@ -55,9 +48,9 @@ window.storage_save_callback = function (error, data) {
 window.set_reprovision_status = function (status, callback) {
   callback = callback || function () {};
 
-  window.lunchbox.settings.vm.needs_reprovision = true;
+  window.lunchbox.vm.needs_reprovision = true;
 
-  storage.save(window.lunchbox.settings, function (error, data) {
+  storage.save(window.lunchbox, function (error, data) {
     storage_save_callback(error, data);
 
     if (error !== null) {
@@ -92,7 +85,7 @@ window.hide_reprovision_notice = function () {
 
 
 // shortcut reference
-var settings = window.lunchbox.settings;
+var settings = window.lunchbox;
 
 var qc = load_mod('tools/qchain');
 var storage = load_mod('internal/storage');
@@ -113,47 +106,39 @@ $(document).ready(function () {
   // if the previous one completed successfully
   var operations = [];
 
-  operations.push({
-    op: boot.setupNavigation,
-    args: [
-      dialog
-    ]
-  });
+  operations.push({ op: boot.setupNavigation  });
+  operations.push({ op: boot.loadSettings     });
+  operations.push({ op: boot.checkPluginsDir  });
+  operations.push({ op: boot.checkPlugins     });
 
-  operations.push({
-    op: boot.loadSettings,
-    args: [
-      dialog
-    ]
-  });
 
-  operations.push({
-    op: boot.checkProvisionStatus,
-    args: [
-      dialog
-    ]
-  });
+  // operations.push({
+  //   op: boot.checkProvisionStatus,
+  //   args: [
+  //     dialog
+  //   ]
+  // });
 
-  operations.push({
-    op: boot.checkPrerequisites,
-    args: [
-      dialog
-    ]
-  });
+  // operations.push({
+  //   op: boot.checkPrerequisites,
+  //   args: [
+  //     dialog
+  //   ]
+  // });
 
-  operations.push({
-    op: boot.detectDrupalVM,
-    args: [
-      dialog
-    ]
-  });
+  // operations.push({
+  //   op: boot.detectDrupalVM,
+  //   args: [
+  //     dialog
+  //   ]
+  // });
 
-  operations.push({
-    op: updateVMStatus,
-    args: [
-      dialog
-    ]
-  });
+  // operations.push({
+  //   op: updateVMStatus,
+  //   args: [
+  //     dialog
+  //   ]
+  // });
 
   var chain = Q.fcall(function (){});
 
@@ -162,7 +147,9 @@ $(document).ready(function () {
     var link = function () {
       var deferred = Q.defer();
       
-      item.op.apply(item.op, item.args).then(function (result) {
+      var args = typeof item.args != 'undefined' ? item.args : [ dialog ];
+
+      item.op.apply(item.op, args).then(function (result) {
         op_count++;
         dialog.setProgress(op_count / operations.length * 100);
 
@@ -180,10 +167,13 @@ $(document).ready(function () {
   chain.then(function (result) {
     dialog.hide();
 
-    nav.loadFile('views/dashboard.html', function (error) {
+    nav.loadFile('views/dashboard/dashboard.html', function (error) {
       if (error) {
         console.log('Error: ' + error);
       }
+
+      // save the dialog's content for use in dashboard.js
+      window.lunchbox.views.dashboard.boot_log = dialog.getContent();
     });
 
     // storage.save(settings);
@@ -316,7 +306,7 @@ function controlVM(action) {
   child.on('exit', function (exitCode) {
     switch(action) {
       case DRUPALVM_START:
-        if (!window.lunchbox.settings.vm.needs_reprovision) {
+        if (!window.lunchbox.vm.needs_reprovision) {
           updateVMStatus(dialog);
           return;
         }

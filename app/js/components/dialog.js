@@ -131,6 +131,16 @@ var dialog = (function() {
     },
 
     /**
+     * Returns dialog's content.
+     * 
+     * @return {[type]} [description]
+     */
+    getContent: function () {
+      var log = dialog.find('.processingLog');
+      return log.html();
+    },
+
+    /**
      * Appends content to processingLog.
      * @param  {[type]} content [description]
      */
