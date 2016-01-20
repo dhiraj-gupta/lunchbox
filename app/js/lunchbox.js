@@ -106,42 +106,15 @@ $(document).ready(function () {
   // if the previous one completed successfully
   var operations = [];
 
-  operations.push({ op: boot.setupNavigation  });
   operations.push({ op: boot.loadSettings     });
   operations.push({ op: boot.checkPluginsDir  });
   operations.push({ op: boot.checkPlugins     });
-
-
-  // operations.push({
-  //   op: boot.checkProvisionStatus,
-  //   args: [
-  //     dialog
-  //   ]
-  // });
-
-  // operations.push({
-  //   op: boot.checkPrerequisites,
-  //   args: [
-  //     dialog
-  //   ]
-  // });
-
-  // operations.push({
-  //   op: boot.detectDrupalVM,
-  //   args: [
-  //     dialog
-  //   ]
-  // });
-
-  // operations.push({
-  //   op: updateVMStatus,
-  //   args: [
-  //     dialog
-  //   ]
-  // });
+  operations.push({ op: boot.bootPlugins      });
+  operations.push({ op: boot.buildNavigation  });
+  operations.push({ op: boot.linkNavigation   });
 
   var chain = Q.fcall(function (){});
-
+  
   var op_count = 0;
   operations.forEach(function (item) {
     var link = function () {
@@ -167,7 +140,7 @@ $(document).ready(function () {
   chain.then(function (result) {
     dialog.hide();
 
-    nav.loadFile('views/dashboard/dashboard.html', function (error) {
+    nav.loadFile(window.lunchbox.public_path + '/views/dashboard/dashboard.html', function (error) {
       if (error) {
         console.log('Error: ' + error);
       }

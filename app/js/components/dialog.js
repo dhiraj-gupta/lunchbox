@@ -172,16 +172,19 @@ var dialog = (function() {
         log.scrollTop(log.get(0).scrollHeight);
       }
     },
-
+    
     /**
      * Writes buffer output to dialog's log.
      * 
      * @param  {[type]} process        [description]
      * @param  {[type]} outputCallback [description]
+     * @param  {[type]} append         [description]
      * @return {[type]}                [description]
      */
-    logProcess: function (process, outputCallback) {
+    logProcess: function (process, outputCallback, append) {
       var self = this;
+
+      append = (typeof append != 'undefined') ? append : true;
 
       var promise = new Promise(function (resolve, reject) {
         var write = function (buffer) {
@@ -191,7 +194,9 @@ var dialog = (function() {
             outputCallback(content);
           }
 
-          self.append(content);
+          if (append) {
+            self.append(content);
+          }
         };
 
         process.stdout.on('data', write);

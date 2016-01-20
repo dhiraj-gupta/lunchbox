@@ -3,10 +3,6 @@
 var fs = require('fs');
 var Q = require('q');
 
-var remote = require('remote');
-var app = remote.require('app');
-var public_path = app.getAppPath() + '/app';
-
 /**
  * Module for loading/updating main content from files.
  */
@@ -89,8 +85,7 @@ var nav = (function() {
         callback = function () {};
       }
 
-      var filepath = public_path + '/' + src;
-      fs.readFile(filepath, function (err, data) {
+      fs.readFile(src, function (err, data) {
         if (err) {
           callback('Could not load ' + src);
           return;
@@ -99,7 +94,7 @@ var nav = (function() {
         // if we loaded an html file, try to find a matching JS file
         var check_js_file = Q.defer();
 
-        var matches = filepath.match(/(.+)\.html|\.htm$/);
+        var matches = src.match(/(.+)\.html|\.htm$/);
         if (matches && matches.length == 2) {
           var js_filepath = matches[1] + '.js';
           fs.stat(js_filepath, function (error, stats) {
