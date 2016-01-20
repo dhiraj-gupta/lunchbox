@@ -203,6 +203,10 @@ module.exports = (function () {
 
       var operations = [];
       window.lunchbox.plugins.forEach(function (plugin) {
+        if (!plugin.enabled) {
+          return;
+        }
+
         var plugin_obj = window.lunchbox_plugins[plugin.name];
         operations = operations.concat(plugin_obj.getBootOps());
       });
