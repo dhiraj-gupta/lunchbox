@@ -72,9 +72,9 @@ module.exports = (function () {
 
       // save the main settings file
       load.promise.then(function () {
-        fs.writeFile(settings_filepath, yaml.stringify(new_data), function (error) {
+        fs.writeFile(settings_filepath, yaml.stringify(new_data, 10, 2), function (error) {
           if (error) {
-            callback(error);
+            callback(error, null);
             return;
           }
 

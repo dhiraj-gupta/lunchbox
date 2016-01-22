@@ -6,7 +6,7 @@ var gitparse = require('git-url-parse');
 var settings = null;
 
 $(document).ready(function () {
-  settings = window.lunchbox;
+  settings = window.lunchbox.settings;
   
   // process "add plugin" form
   var add_plugin_form = $('#lunchbox-settings-add-plugin');

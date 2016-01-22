@@ -8,8 +8,14 @@ var os = require('os');
     Global items for access from all modules / files
 ***************************************************************/
 
+require('./class.LunchboxPlugin');
+
 // container for lunchbox data
 window.lunchbox = {};
+// settings data that will be written to settings.yaml; the only exception is
+// window.lunchbox.settings.plugins.##.instance, which is meant for temporary
+// plugin-related data, and gets auto-removed by storage during save operation
+window.lunchbox.settings = function () {};
 
 /**
  * Helper to load custom modules. Alleviates the need to provide a
@@ -23,69 +29,8 @@ window.load_mod = function (src) {
   return require('./' + src + '.js');
 }
 
-/**
- * Callback for storage.save()
- * 
- * @param  {[type]} error [description]
- * @param  {[type]} data  [description]
- * @return {[type]}       [description]
- */
-window.storage_save_callback = function (error, data) {
-  if (error !== null) {
-    console.log('Error: ' + error);
-    return;
-  }
-
-  window.lunchbox = data;
-};
-
-/**
- * Updates reprovision status in settings.
- * 
- * @param {[type]}   status   [description]
- * @param {Function} callback [description]
- */
-window.set_reprovision_status = function (status, callback) {
-  callback = callback || function () {};
-
-  window.lunchbox.vm.needs_reprovision = true;
-
-  storage.save(window.lunchbox, function (error, data) {
-    storage_save_callback(error, data);
-
-    if (error !== null) {
-      return;
-    }
-
-    callback();
-  });
-}
-
-/**
- * Shows alert to reprovision the vm
- * 
- * @return {[type]} [description]
- */
-window.show_reprovision_notice = function () {
-  set_reprovision_status(true, function () {
-    $('#reprovisionAlert').show('fast');
-  });
-}
-
-/**
- * Hides alert to reprovision the vm
- * 
- * @return {[type]} [description]
- */
-window.hide_reprovision_notice = function () {
-  set_reprovision_status(false, function () {
-    $("#reprovisionAlert").hide("fast");
-  });
-}
-
-
 // shortcut reference
-var settings = window.lunchbox;
+var settings = window.lunchbox.settings;
 
 var qc = load_mod('tools/qchain');
 var storage = load_mod('internal/storage');
@@ -146,7 +91,7 @@ $(document).ready(function () {
       }
 
       // save the dialog's content for use in dashboard.js
-      window.lunchbox.views.dashboard.boot_log = dialog.getContent();
+      window.lunchbox.settings.views.dashboard.boot_log = dialog.getContent();
     });
 
     // storage.save(settings);

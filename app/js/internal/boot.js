@@ -14,7 +14,7 @@ var storage = load_mod('internal/storage');
 module.exports = (function () {
   return {
     /**
-     * Loads & parses settings.yaml into the `window.lunchbox` object.
+     * Loads & parses settings.yaml into the `window.lunchbox.settings` object.
      * 
      * @param  {[type]} dialog [description]
      * @return {[type]}        [description]
@@ -44,14 +44,68 @@ module.exports = (function () {
           };
         }
 
+        // set useful paths
         var remote = require('remote');
         var app = remote.require('app');
-        data.user_data_path = app.getPath('userData');
-        data.plugins_path = data.user_data_path + '/plugins';
-        data.app_path = app.getAppPath();
-        data.public_path = data.app_path + '/app';
 
-        window.lunchbox = data;
+        window.lunchbox.user_data_path = app.getPath('userData');
+        window.lunchbox.plugins_path = app.getPath('userData') + '/plugins';
+        window.lunchbox.app_path = app.getAppPath();
+        window.lunchbox.public_path = app.getAppPath() + '/app';
+
+        // settings class
+        var Settings = function () {};
+        // helper to re-save the settings
+        Settings.prototype.save = function (callback) {
+          var callback = callback || function () {};
+
+          // the plugins stored in window.lunchbox.settings.plugins contains an
+          // 'instance' property, which is an instantiated plugin object; that
+          // object contains its own 'plugin' property, which is a reference to
+          // the appropriate plugin in window.lunchbox.settings.plugins; this
+          // circular inheritance will cause issues if we try to stringify the
+          // object as-is; the workaround is to build a temporary plain settings 
+          // object (just for yaml~ification purposes) that doesn't contain
+          // functions or object instances
+          var plain_settings = {};
+          for (var i in this) {
+            if (this.hasOwnProperty(i)) {
+              plain_settings[i] = this[i];
+            }
+          }
+
+          var instances = [];
+          for (var j in plain_settings.plugins) {
+            instances[j] = plain_settings.plugins[j].instance;
+            delete plain_settings.plugins[j].instance;
+          }
+
+          var storage = load_mod('internal/storage');
+          storage.save(plain_settings, function (error, returned_data) {
+            if (error) {
+              callback(error);
+
+              return;
+            }
+
+            // re-populate the temporarily removed 'instance' objects
+            for (var k in returned_data.plugins) {
+              returned_data.plugins[k].instance = instances[k];
+            }
+
+            callback(null);
+          });
+        };
+
+        // re-create the settings object
+        window.lunchbox.settings = new Settings();
+
+        // re-populate the settings object with newly loaded data
+        for (var key in data) {
+          if (data.hasOwnProperty(key)) {
+            window.lunchbox.settings[key] = data[key];
+          }
+        }
 
         deferred.resolve();
       });
@@ -96,7 +150,7 @@ module.exports = (function () {
     },
 
     /**
-     * Ensures all plugins in window.lunchbox.plugins have codebases, and match Lunchbox
+     * Ensures all plugins in window.lunchbox.settings.plugins have codebases, and match Lunchbox
      * plugin requirements.
      * 
      * @param  {[type]} dialog [description]
@@ -105,19 +159,14 @@ module.exports = (function () {
     checkPlugins: function (dialog) {
       var chain = Q.fcall(function (){});
       
-      // individual plugins' code will live in this object
-      if (typeof window.lunchbox_plugins == 'undefined') {
-        window.lunchbox_plugins = {};
-      }
-
       // no plugins present
-      if (!window.lunchbox.plugins.length) {
+      if (!window.lunchbox.settings.plugins.length) {
         return chain;
       }
       
       // build a promise chain where each link handles a single plugin
       var found_plugins = [];
-      window.lunchbox.plugins.forEach(function (plugin) {
+      window.lunchbox.settings.plugins.forEach(function (plugin) {
         var link = function () {
           var deferred = Q.defer();
 
@@ -130,31 +179,12 @@ module.exports = (function () {
               fs.stat(plugin_main_path, function (error, stats) {
                 // entry-point found; load the plugin & save this plugin to the "found" array
                 if (!error && stats.isFile()) {
-                  var plugin_obj = require(plugin_main_path);
+                  var plugin_class = require(plugin_main_path);
 
-                  // rudimentary check for methods that must be implemented in the plugin
-                  var required_methods = [
-                    'init',
-                    'getBootOps'
-                  ];
-
-                  var missing_methods = [];
-                  for (var i in required_methods) {
-                    if (typeof plugin_obj[required_methods[i]] !== 'function') {
-                      missing_methods.push(required_methods[i] + '()');
-                    }
-                  }
-
-                  plugin_obj.init(dialog);
-
-                  if (missing_methods.length) {
-                    deferred.reject('Malformed plugin: ' + plugin.name_nice + '. Missing implementation(s) of: ' + missing_methods.join(', ') + '.')
-                    return;
-                  }
-
-                  window.lunchbox_plugins[plugin.name] = plugin_obj;
+                  plugin.instance = new plugin_class(plugin, dialog);
 
                   found_plugins.push(plugin);
+
                   deferred.resolve();
                   return;
                 }
@@ -177,10 +207,17 @@ module.exports = (function () {
       });
       
       // now that we've checked all plugins, update the plugin object with the
-      // array of found plugins
+      // array of found plugins, and write to settings file
       chain = chain.then(function () {
-        window.lunchbox.plugins = found_plugins;
-        storage.save(window.lunchbox, storage_save_callback);
+        var deferred = Q.defer();
+
+        window.lunchbox.settings.plugins = found_plugins;
+
+        window.lunchbox.settings.save(function () {
+          deferred.resolve();
+        });
+
+        return deferred.promise;
       });
       
       return chain;
@@ -195,20 +232,24 @@ module.exports = (function () {
       var chain = Q.fcall(function (){});
 
       // no plugins present
-      if (!window.lunchbox.plugins.length) {
+      if (!window.lunchbox.settings.plugins.length) {
         return chain;
       }
       
       dialog.append('Booting plugins.' + os.EOL);
 
       var operations = [];
-      window.lunchbox.plugins.forEach(function (plugin) {
+      window.lunchbox.settings.plugins.forEach(function (plugin) {
         if (!plugin.enabled) {
           return;
         }
 
-        var plugin_obj = window.lunchbox_plugins[plugin.name];
-        operations = operations.concat(plugin_obj.getBootOps());
+        plugin.instance.getBootOps().forEach(function (op) {
+          operations.push({
+            op: op,
+            self: plugin.instance
+          });
+        });
       });
 
       var op_count = 0;
@@ -216,7 +257,8 @@ module.exports = (function () {
         var link = function () {
           var deferred = Q.defer();
           
-          item.apply(item, [ dialog ]).then(function (result) {
+          // we pass the plugin instance as the 'this' context to the operation
+          item.op.apply(item.self, [ dialog ]).then(function (result) {
             op_count++;
             dialog.setProgress(op_count / operations.length * 100);
 
@@ -255,21 +297,6 @@ module.exports = (function () {
         for (var i in nav.items) {
           var item = nav.items[i];
 
-          if (typeof item.href == 'undefined' || !item.href) {
-            item.href = '#';
-          }
-
-          if (nav.plugin == 'lunchbox') {
-            item.href = window.lunchbox.public_path + '/' + item.href;
-          }
-          else if (item.href != '#' && typeof nav.plugin_path != 'undefined') {
-            item.href = nav.plugin_path + '/' + item.href;
-          }
-
-          if (typeof item.text == 'undefined' || !item.text) {
-            item.text = '';
-          }
-
           template += '<li class="view"><a href="' + item.href + '">' + item.text + '</a></li>';
         }
 
@@ -283,12 +310,12 @@ module.exports = (function () {
         title: 'Lunchbox',
         items: [
           {
-            href: 'views/dashboard/dashboard.html',
+            href: window.lunchbox.public_path + '/' + 'views/dashboard/dashboard.html',
             name: 'dashboard',
             text: '<i class="fa fa-cogs"></i> Dashboard',
           },
           {
-            href: 'views/settings/settings.html',
+            href: window.lunchbox.public_path + '/' + 'views/settings/settings.html',
             name: 'settings',
             text: '<i class="fa fa-cogs"></i> Settings',
           }
@@ -298,26 +325,39 @@ module.exports = (function () {
       $('nav').append(build_nav(lunchbox_nav));
 
       // no plugins present
-      if (!window.lunchbox.plugins.length) {
+      if (!window.lunchbox.settings.plugins.length) {
         deferred.resolve();
         return deferred.promise;
       }
       
-      window.lunchbox.plugins.forEach(function (plugin, key) {
+      window.lunchbox.settings.plugins.forEach(function (plugin, key) {
         if (!plugin.enabled) {
           return;
         }
 
-        var plugin_obj = window.lunchbox_plugins[plugin.name];
-
         // a plugin doesn't have to implement a nav
-        if (typeof plugin_obj.getNav !== 'function') {
+        if (typeof plugin.instance.getNav !== 'function') {
           return;
         }
 
-        var plugin_nav = plugin_obj.getNav();
-        plugin_nav.plugin = plugin.name;
-        plugin_nav.plugin_path = plugin.path;
+        var plugin_nav = plugin.instance.getNav();
+        plugin_nav.plugin = plugin.instance.getUniqueName();
+
+        for (var i in plugin_nav.items) {
+          // each menu item must have a value for href
+          if (typeof plugin_nav.items[i].href == 'undefined' || !plugin_nav.items[i]) {
+            plugin_nav.items[i] = '#';
+          }
+          // the href must be an absolute value
+          else {
+            plugin_nav.items[i].href = plugin.path + '/' + plugin_nav.items[i].href;
+          }
+
+          // each menu item must have a value for text
+          if (typeof plugin_nav.items[i].text == 'undefined' || !plugin_nav.items[i].text) {
+            plugin_nav.items[i].text = '';
+          }
+        }
 
         $('nav').append(build_nav(plugin_nav));
       });
