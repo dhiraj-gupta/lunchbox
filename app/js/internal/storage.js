@@ -1,6 +1,5 @@
 'use strict';
 
-var yaml = require('yamljs');
 var fs = require('fs');
 var os = require('os');
 
@@ -13,7 +12,7 @@ module.exports = (function () {
   var remote = require('remote');
   var app = remote.require('app');
 
-  var settings_filepath = app.getPath('userData') + '/settings.yaml';
+  var settings_filepath = app.getPath('userData') + '/settings.json';
 
   var data = {};
 
@@ -27,18 +26,22 @@ module.exports = (function () {
       return;
     }
 
-    init.reject('Could not open/create settings.yaml file.');
+    init.reject('Could not open/create settings.json file.');
   });
 
   init.promise.then(function () {
     fs.readFile(settings_filepath, 'utf-8', function (error, contents) {
       if (!error) {
         try {
-          data = yaml.parse(contents);
+          if (!contents) {
+            contents = '{}';
+          }
+
+          data = JSON.parse(contents);
           load.resolve();
         }
         catch (exception) {
-          load.reject('Could not parse settings.yaml. Exception: ' + exception);
+          load.reject('Could not parse settings.json. Exception: ' + exception);
         }
       }
     });
@@ -46,7 +49,7 @@ module.exports = (function () {
 
   return {
     /**
-     * Returns a promise that resolves when the settings.yaml is parsed.
+     * Returns a promise that resolves when the settings.json is parsed.
      * 
      * @return {[type]} [description]
      */
@@ -60,8 +63,7 @@ module.exports = (function () {
     },
     
     /**
-     * Saves main settings object to settings.yaml, and vm config to
-     * vm's config.yaml.
+     * Saves main settings object to settings.json.
      * 
      * @param  {[type]}   new_data [description]
      * @param  {Function} callback [description]
@@ -72,7 +74,7 @@ module.exports = (function () {
 
       // save the main settings file
       load.promise.then(function () {
-        fs.writeFile(settings_filepath, yaml.stringify(new_data, 10, 2), function (error) {
+        fs.writeFile(settings_filepath, JSON.stringify(new_data, 10, 2), function (error) {
           if (error) {
             callback(error, null);
             return;

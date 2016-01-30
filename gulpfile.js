@@ -10,7 +10,7 @@ var path = require('path');
 gulp.task('default', function () { 
   // generate .css files from .less files
   gulp.src('./app/css/*.less').pipe(less({
-    paths: [ path.join(__dirname, 'less', 'includes') ]
+    paths: [ path.join(__dirname) ]
   }))
   .pipe(gulp.dest('./app/css'));
 

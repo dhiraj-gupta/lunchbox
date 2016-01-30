@@ -60,26 +60,26 @@ $(document).ready(function () {
         name: name_value,
         name_nice: name_value_nice,
         git: git_value.href,
-        path: settings.plugins_path + '/' + name_value,
+        path: window.lunchbox.plugins_path + '/' + name_value,
         enabled: 0 // disabled by default
       };
 
       // TODO: ensure filepath doesn't exist
 
       var spawn = require('child_process').spawn;
-      var child = spawn('git', ['clone', git_value.href, settings.plugins_path + '/' + name_value]);
+      var child = spawn('git', ['clone', git_value.href, window.lunchbox.plugins_path + '/' + name_value]);
 
       child.on('exit', function (exit_code) {
         alert.bind(add_plugin_trigger.parent());
 
         if (exit_code) {
-          alert.error('Could not clone Git repository to ' + settings.plugins_path + '/' + name_value + '.');
+          alert.error('Could not clone Git repository to ' + window.lunchbox.plugins_path + '/' + name_value + '.');
           return;
         }
 
         // add plugin to main settings & save
         settings.plugins.push(plugin);
-        storage.save(settings, function (error, data) {
+        settings.save(function (error, data) {
           if (error !== null) {
             alert.error(error);
           }
@@ -89,8 +89,6 @@ $(document).ready(function () {
 
           alert.status('Added "' + name_value_nice + '" plugin.');
           update_plugins_list();
-
-          storage_save_callback(error, data);
         });
       });
     });
@@ -138,7 +136,7 @@ $(document).ready(function () {
         }
       });
 
-      storage.save(settings, function (error, data) {
+      settings.save(function (error, data) {
         var alert = load_mod('components/alert');
         alert.bind(manage_plugins_trigger.parent());
 
@@ -148,7 +146,15 @@ $(document).ready(function () {
 
         alert.status('Updated plugins.');
 
-        storage_save_callback(error, data);
+        // re-run the plugin and nav startup operations to instantly reflect
+        // the updated plugins
+        var dialog = load_mod('components/dialog').create('Updating configuration...');
+
+        var success = function (result) {
+          dialog.hide();
+        };
+
+        runOps(['plugins', 'nav'], [dialog], success, error);
       });
     }); 
   }

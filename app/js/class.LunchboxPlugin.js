@@ -43,4 +43,28 @@ LunchboxPlugin.prototype.logDialog = function (message) {
   }
 };
 
+LunchboxPlugin.prototype.addCSS = function (path, success, error) {
+  // optional callbacks
+  var success = success || function () {};
+  var error = error || function () {};
+  
+  // create link tag
+  var element = document.createElement('link');
+  element.type = 'text/css';
+  element.async = true;
+  element.href = this.plugin.path + '/' + path;
+  element.rel = 'stylesheet';
+  element.onreadystatechange = function() {
+    if (this.readyState == 'complete' || this.readyState == 'loaded') {
+      success();
+    }
+  };
+  element.onload = success;
+  element.onerror = error;
+
+  // insert the tag next to an existing base or link element
+  var target = document.getElementsByTagName('base')[0] || document.getElementsByTagName('link')[0];
+  target.parentNode.insertBefore(element, target);
+};
+
 window['LunchboxPlugin'] = LunchboxPlugin;

@@ -5,6 +5,6 @@ $(document).ready(function () {
 
   var boot_log = $('#lunchbox-dashboard-boot-log');
   if (boot_log.length && typeof settings.views.dashboard.boot_log !== 'undefined') {
-    boot_log.find('.panel-body').append(settings.views.dashboard.boot_log);
+    boot_log.find('.panel-body').append(decodeURI(settings.views.dashboard.boot_log));
   }
 });

@@ -3,7 +3,6 @@
 var os      = require('os');
 var fs      = require('fs');
 var Q       = require('q');
-var yaml    = require('yamljs');
 
 var qc      = load_mod('tools/qchain');
 var storage = load_mod('internal/storage');
@@ -14,7 +13,7 @@ var storage = load_mod('internal/storage');
 module.exports = (function () {
   return {
     /**
-     * Loads & parses settings.yaml into the `window.lunchbox.settings` object.
+     * Loads & parses settings.json into the `window.lunchbox.settings` object.
      * 
      * @param  {[type]} dialog [description]
      * @return {[type]}        [description]
@@ -65,7 +64,7 @@ module.exports = (function () {
           // the appropriate plugin in window.lunchbox.settings.plugins; this
           // circular inheritance will cause issues if we try to stringify the
           // object as-is; the workaround is to build a temporary plain settings 
-          // object (just for yaml~ification purposes) that doesn't contain
+          // object (just for JSON sting~ification purposes) that doesn't contain
           // functions or object instances
           var plain_settings = {};
           for (var i in this) {
@@ -157,6 +156,10 @@ module.exports = (function () {
      * @return {[type]}        [description]
      */
     checkPlugins: function (dialog) {
+      // clear the global-notices container which may have been populated by
+      // plugins prior to this operation being ran
+      $('#global-notices').empty();
+
       var chain = Q.fcall(function (){});
       
       // no plugins present
@@ -322,6 +325,7 @@ module.exports = (function () {
         ]
       };
 
+      $('nav').empty();
       $('nav').append(build_nav(lunchbox_nav));
 
       // no plugins present

@@ -1,4 +1,3 @@
-var yaml = require('yamljs');
 var shell = require('shell');
 var bootbox = require('bootbox');
 var Q = require('q');
@@ -12,7 +11,7 @@ require('./class.LunchboxPlugin');
 
 // container for lunchbox data
 window.lunchbox = {};
-// settings data that will be written to settings.yaml; the only exception is
+// settings data that will be written to settings.json; the only exception is
 // window.lunchbox.settings.plugins.##.instance, which is meant for temporary
 // plugin-related data, and gets auto-removed by storage during save operation
 window.lunchbox.settings = function () {};
@@ -43,33 +42,61 @@ var DRUPALVM_STOP = "stop";
 var DRUPALVM_PROVISION = "provision";
 var DRUPALVM_RELOAD = "reload";
 
-$(document).ready(function () {
-  var boot = load_mod('internal/boot');
-  var dialog = load_mod('components/dialog').create('Reading configuration...');
+// groups of startup operations; these will be performed sequentially; 
+// each operation will only execute if the previous one completed successfully;
+// these are separated into sub-groups so that a grouped subset of these
+// operations can be re-executed at a later time (ex. running plugins and nav ops
+// again when the "manage plugins" form is updated)
+window.lunchbox_operations = {
+  boot: [],
+  plugins: [],
+  nav: []
+};
 
-  // these will be performed sequentially; each operation will only execute
-  // if the previous one completed successfully
-  var operations = [];
+/**
+ * Runs operations in specified groups.
+ * 
+ * @param  {[type]} groups  [description]
+ * @param  {[type]} args    [description]
+ * @param  {[type]} success [description]
+ * @param  {[type]} error   [description]
+ * @param  {[type]} step    [description]
+ * @return {[type]}         [description]
+ */
+window.runOps = function (groups, args, success, error, step) {
+  // default to all groups
+  groups = groups || Object.keys(window.lunchbox_operations);
 
-  operations.push({ op: boot.loadSettings     });
-  operations.push({ op: boot.checkPluginsDir  });
-  operations.push({ op: boot.checkPlugins     });
-  operations.push({ op: boot.bootPlugins      });
-  operations.push({ op: boot.buildNavigation  });
-  operations.push({ op: boot.linkNavigation   });
+  // default callbacks
+  var success = success || function () {};
+  var error = error || function () {};
+  var step = step || function () {};
 
+  // default arguments passed to each op
+  var args = args || [];
+
+  // build a flat array of operations from the desired groups
+  var ops = [];
+  for (var i in groups) {
+    if (window.lunchbox_operations.hasOwnProperty(groups[i])) {
+      for (var j in window.lunchbox_operations[groups[i]]) {
+        ops.push(window.lunchbox_operations[groups[i]][j]);
+      }
+    }
+  }
+
+  // build a chain of promises from the operations
   var chain = Q.fcall(function (){});
   
   var op_count = 0;
-  operations.forEach(function (item) {
+  ops.forEach(function (item) {
     var link = function () {
       var deferred = Q.defer();
       
-      var args = typeof item.args != 'undefined' ? item.args : [ dialog ];
-
-      item.op.apply(item.op, args).then(function (result) {
+      item.apply(item, args).then(function (result) {
         op_count++;
-        dialog.setProgress(op_count / operations.length * 100);
+
+        step(op_count, ops.length);
 
         deferred.resolve(result);
       }, function (error) {
@@ -82,7 +109,29 @@ $(document).ready(function () {
     chain = chain.then(link);
   });
 
-  chain.then(function (result) {
+  chain.then(success, error);
+};
+
+$(document).ready(function () {
+  // build and run startup operations
+  var boot = load_mod('internal/boot');
+  var dialog = load_mod('components/dialog').create('Reading configuration...');
+
+  var ops = window.lunchbox_operations;
+
+  // boot group
+  ops.boot.push(boot.loadSettings);
+  ops.boot.push(boot.checkPluginsDir);
+  // plugins group
+  ops.plugins.push(boot.checkPlugins);
+  ops.plugins.push( boot.bootPlugins);
+  
+  // navigation group
+  ops.nav.push(boot.buildNavigation);
+  ops.nav.push(boot.linkNavigation);
+
+  // promise chain success callback
+  var success = function (result) {
     dialog.hide();
 
     nav.loadFile(window.lunchbox.public_path + '/views/dashboard/dashboard.html', function (error) {
@@ -91,13 +140,21 @@ $(document).ready(function () {
       }
 
       // save the dialog's content for use in dashboard.js
-      window.lunchbox.settings.views.dashboard.boot_log = dialog.getContent();
+      window.lunchbox.settings.views.dashboard.boot_log = encodeURI(dialog.getContent());
     });
+  };
 
-    // storage.save(settings);
-  }, function (error) {
+  // promise chain error callback
+  var error = function (error) {
     dialog.append(error, 'error');
-  });
+  };
+
+  // promise chain step callback
+  var step = function (count, total) {
+    dialog.setProgress(count / total * 100);
+  };
+
+  runOps(null, [dialog], success, error, step);
 });
 
 // ------ Event Hookups ------ //
