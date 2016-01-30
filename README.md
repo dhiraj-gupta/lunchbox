@@ -28,3 +28,9 @@ Steps:
 
 
 ### Note: NFS mounting still requires user input that is not handled through the app yet (password to edit nfs exports). Watch your terminal window for the password prompt.
+
+## Plugins
+
+Available plugins:
+
+* [DrupalVM](https://github.com/LunchboxDevTools/drupalvm)
