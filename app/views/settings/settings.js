@@ -1,4 +1,4 @@
-var storage = load_mod('internal/storage');
+// var storage = load_mod('internal/storage');
 var alert = load_mod('components/alert');
 
 var gitparse = require('git-url-parse');

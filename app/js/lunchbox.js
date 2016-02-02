@@ -7,6 +7,9 @@ var os = require('os');
     Global items for access from all modules / files
 ***************************************************************/
 
+require('./class.GenericSettings');
+require('./class.LunchboxSettings');
+
 require('./class.LunchboxPlugin');
 
 // container for lunchbox data
@@ -15,6 +18,10 @@ window.lunchbox = {};
 // window.lunchbox.settings.plugins.##.instance, which is meant for temporary
 // plugin-related data, and gets auto-removed by storage during save operation
 window.lunchbox.settings = function () {};
+
+// the nav click callback will set this to the plugin responsible for the
+// clicked nav item
+window.active_plugin = false;
 
 /**
  * Helper to load custom modules. Alleviates the need to provide a
@@ -32,7 +39,6 @@ window.load_mod = function (src) {
 var settings = window.lunchbox.settings;
 
 var qc = load_mod('tools/qchain');
-var storage = load_mod('internal/storage');
 var nav = load_mod('components/nav');
 
 var drupalvm_running = false;
@@ -124,11 +130,10 @@ $(document).ready(function () {
   ops.boot.push(boot.checkPluginsDir);
   // plugins group
   ops.plugins.push(boot.checkPlugins);
-  ops.plugins.push( boot.bootPlugins);
+  ops.plugins.push(boot.bootPlugins);
   
   // navigation group
   ops.nav.push(boot.buildNavigation);
-  ops.nav.push(boot.linkNavigation);
 
   // promise chain success callback
   var success = function (result) {
