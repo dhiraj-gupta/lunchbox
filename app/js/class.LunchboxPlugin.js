@@ -67,4 +67,8 @@ LunchboxPlugin.prototype.addCSS = function (path, success, error) {
   target.parentNode.insertBefore(element, target);
 };
 
+LunchboxPlugin.prototype.preSave = function (settings) {
+
+};
+
 window['LunchboxPlugin'] = LunchboxPlugin;

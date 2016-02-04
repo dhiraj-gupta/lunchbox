@@ -9,7 +9,8 @@ var Q = require('q');
 var nav = (function() {
   var container = '';
 
-  var menu_items = [];
+  // last loaded (ie. "current") menu item (path & callback)
+  var active_item = {};
 
   /**
    * Updates the container with given data.
@@ -52,24 +53,21 @@ var nav = (function() {
       var self = this;
       el = $(el);
 
-      // track item for name-based access later on
-      // if (var name = el.attr('lunchbox-name')) {
-      //   menu_items.name = el;
-      // }
-
       el.off('click');
 
       el.click(function (e) {
         e.preventDefault();
 
-        self.loadFile(el.attr('href'), callback);
-      });
-    },
+        var path = el.attr('href');
 
-    loadByName: function (name) {
-      if (typeof menu_items.name !== 'undefined') {
-        menu_items.name.click();
-      }
+        // track clicked item
+        active_item = {
+          path: path,
+          callback: callback
+        };
+
+        self.loadFile(path, callback);
+      });
     },
 
     /**
@@ -80,10 +78,7 @@ var nav = (function() {
      */
     loadFile: function (src, callback) {
       var self = this;
-      
-      if (typeof callback != 'function') {
-        callback = function () {};
-      }
+      var callback = callback || function () {};
 
       fs.readFile(src, function (err, data) {
         if (err) {
@@ -137,6 +132,23 @@ var nav = (function() {
       delete require.cache[path];
       // load file
       require(path);
+    },
+
+    /**
+     * Reloads the current view.
+     * 
+     * @param  {Function} callback [description]
+     * @return {[type]}            [description]
+     */
+    reloadCurrentView: function (callback) {
+      var callback = callback || function () {};
+
+      if (active_item && active_item.path && active_item.callback) {
+        this.loadFile(active_item.path, function (error) {
+          active_item.callback(error);
+          callback(error);
+        });
+      }
     }
   };
 })();

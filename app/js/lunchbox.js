@@ -59,6 +59,10 @@ window.lunchbox_operations = {
   nav: []
 };
 
+window.reloadCurrentView = function (callback) {
+  nav.reloadCurrentView(callback);
+};
+
 /**
  * Runs operations in specified groups.
  * 
@@ -161,6 +165,16 @@ $(document).ready(function () {
 
   runOps(null, [dialog], success, error, step);
 });
+
+
+
+
+
+
+
+
+
+
 
 // ------ Event Hookups ------ //
 

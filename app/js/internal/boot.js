@@ -4,8 +4,6 @@ var os      = require('os');
 var fs      = require('fs');
 var Q       = require('q');
 
-var qc      = load_mod('tools/qchain');
-
 /**
  * Boot tasks.
  */
@@ -260,9 +258,9 @@ module.exports = (function () {
             items.push(el);
 
             if (el.attr('href') != '#') {
-              nav.addNavItem(el, function (err) {
-                if (err) {
-                  console.log('error: ' + err);
+              nav.addNavItem(el, function (error) {
+                if (error) {
+                  console.log('error: ' + error);
                   return;
                 }
 

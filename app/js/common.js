@@ -16,4 +16,14 @@ $(document).ready(function () {
       shell.openExternal(src);
     }
   });
+
+  $('.placeholder').click(function (e) {
+    e.preventDefault();
+
+    var el = $(this);
+    var placeholder = '';
+    if (placeholder = el.attr('placeholder')) {
+      alert(placeholder);
+    }
+  });
 });
