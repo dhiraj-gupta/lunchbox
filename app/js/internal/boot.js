@@ -272,7 +272,7 @@ module.exports = (function () {
                 // add 'active' class to clicked nav item
                 el.parent().addClass('active');
 
-                window.active_plugin = nav_struct.plugin;
+                window.active_plugin = nav_struct.plugin.instance;
               });
             }
           });
