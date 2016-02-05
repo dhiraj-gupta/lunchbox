@@ -206,48 +206,6 @@ $("#drupalvm_provision").click(function () {
   }
 });
 
-/**
- * Updates UI running status based on output of "vagrant status drupalvm"
- 
- * @param  {[type]} dialog [description]
- * @return {[type]}        [description]
- */
-function updateVMStatus(dialog) {
-  var deferred = Q.defer();
-
-  // Check if DrupalVM is running
-  var spawn = require('child_process').spawn;
-  var child = spawn('vagrant', ['status', settings.vm.id]);
-
-  var stdout = '';
-  dialog.logProcess(child, function (output) {
-    stdout += output;
-  });
-
-  child.on('exit', function (exitCode) {
-    // Search for the status
-    if (stdout.indexOf('poweroff') > -1) {
-      $('#drupalvm_start').removeClass('disabled');
-      $('#drupalvm_stop').addClass('disabled');
-      $('.drupalVMHeaderStatus').text("Stopped");
-
-      drupalvm_running = false;
-    }
-    else {
-      $('#drupalvm_start').addClass('disabled');
-      $('#drupalvm_stop').removeClass('disabled');
-      $('.drupalVMHeaderStatus').text("Running");
-
-      drupalvm_running = true;
-    }
-
-    deferred.resolve();
-    dialog.setProgress(100);
-  });
-
-  return deferred.promise;
-}
-
 function drupalVMProcessing(modalTitle) {
   var contents = "<div class='progress'>";
   contents+= "<div class='progress-bar progress-bar-striped active' role=progressbar' aria-valuenow='100' aria-valuemin='0' aria-valuemax='100' style='width: 100%''>";
