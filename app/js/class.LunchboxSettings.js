@@ -56,6 +56,10 @@ LunchboxSettings.prototype.save = function (callback) {
   // functions or object instances
   var instances = [];
   for (var j in properties.plugins) {
+    if (typeof properties.plugins[j].instance == 'undefined') {
+      continue;
+    }
+    
     properties.plugins[j].instance.preSave(properties.plugins[j].settings);
 
     instances[j] = properties.plugins[j].instance;

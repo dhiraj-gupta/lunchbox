@@ -95,67 +95,262 @@ $(document).ready(function () {
   }
 
   // load existing plugins
+  var manage_plugins_table = $('#lunchbox-settings-manage-plugins table');
+
   update_plugins_list();
   function update_plugins_list () {
-    // build plugins checkboxes
-    var template = '';
+    // build plugins table
+    if (!manage_plugins_table.length) {
+      return;
+    }
+
+    // ensure we start with a clean slate
+    manage_plugins_table.find('.panel-body').empty();
 
     for (var i in settings.plugins) {
       var plugin = settings.plugins[i];
+      if (manage_plugins_table.find('#row_plugin_' + plugin.name).length) {
+        continue; // skip if this one is already in the table
+      }
 
-      var checked = plugin.enabled ? ' checked="checked" ' : '';
-
-      template +=  '<div class="checkbox">';
-      template += '  <label><input type="checkbox" ' + checked + ' name="' + plugin.name + '"> ' + plugin.name_nice + '</label>';
-      template += '</div>';
-    }
-
-    var manage_plugins_form = $('#lunchbox-settings-manage-plugins');
-    if (manage_plugins_form.length) {
-      manage_plugins_form.find('.dynamic').empty().append(template);
+      // build row & append
+      var row = get_plugin_row(plugin);
+      manage_plugins_table.find('.panel-body').append(row);
     }
   }
 
-  // process "manage plugins" form
-  var manage_plugins_form = $('#lunchbox-settings-manage-plugins');
-  if (manage_plugins_form.length) {
-    var manage_plugins_trigger = manage_plugins_form.find('button.submit');
-    manage_plugins_trigger.click(function () {
-      manage_plugins_form.find('input[type=checkbox]').each(function (i, el) {
-        el = $(el);
+  /**
+   * Returns DOM for plugin <tr> row element.
+   * 
+   * @param  {[type]} plugin [description]
+   * @return {[type]}        [description]
+   */
+  function get_plugin_row(plugin) {
+    // name
+    var td_name = $('<td>').append(plugin.name_nice);
 
-        var name = el.attr('name');
-        var enabled = el.is(':checked') ? 1 : 0;
+    // toggle button
+    var td_toggle = $('<td>').append($('<button>', {
+      click: function() {
+        toggle_plugin(this, plugin);
+      },
+      class: 'btn btn-sm btn-primary'
+    }));
 
-        for (var i in settings.plugins) {
-          var plugin = settings.plugins[i];
+    td_toggle.find('button').eq(0).append($('<span>', {
+      class: 'glyphicon glyphicon-' + (plugin.enabled ? 'check' : 'unchecked')
+    }));
 
-          if (plugin.name == name) {
-            settings.plugins[i].enabled = enabled;
+    // update button
+    var td_update = $('<td>').append($('<button>', {
+      click: function() {
+        update_plugin(plugin);
+      },
+      class: 'btn btn-sm btn-primary'
+    }));
+
+    td_update.find('button').eq(0).append($('<span>', {
+      class: 'glyphicon glyphicon-refresh'
+    }));
+
+    // remove button
+    var td_remove = $('<td>');
+    td_remove.append($('<button>', {
+      click: function() {
+        remove_plugin(plugin);
+      },
+      class: 'btn btn-sm btn-primary'
+    }));
+
+    td_remove.find('button').eq(0).append($('<span>', {
+      class: 'glyphicon glyphicon-trash'
+    }));
+
+    // row <tr> containing all of the above <td>s
+    var row = $('<tr>', {
+      id: 'row_plugin_' + plugin.name
+    });
+
+    row.append(td_name);
+    row.append(td_toggle);
+    row.append(td_update);
+    row.append(td_remove);
+
+    return row;
+  }
+
+  /**
+   * Re-runs the plugin and nav startup operations to instantly reflect
+   * plugin updates.
+   * @param  {[type]} error [description]
+   * @return {[type]}       [description]
+   */
+  function run_plugin_startup_ops (error, callback) {
+    var callback = callback || function () {};
+
+    var dialog = load_mod('components/dialog').create('Updating configuration...');
+
+    var success = function (result) {
+      dialog.hide();
+      callback();
+    };
+
+    runOps(['plugins', 'nav'], [dialog], success, error);
+  }
+
+  /**
+   * Toggles plugin status and UI checkbox.
+   * 
+   * @param  {[type]} button [description]
+   * @param  {[type]} plugin [description]
+   * @return {[type]}        [description]
+   */
+  function toggle_plugin (button, plugin) {
+    // toggle the checkbox and the plugin's enabled status
+    if (plugin.enabled) {
+      $(button).find('span').eq(0).removeClass('glyphicon-check').addClass('glyphicon-unchecked');
+      plugin.enabled = 0;
+    }
+    else {
+      $(button).find('span').eq(0).removeClass('glyphicon-unchecked').addClass('glyphicon-check');
+      plugin.enabled = 1;
+    }
+
+    settings.save(function (error, data) {
+      var alert = load_mod('components/alert');
+      alert.bind(manage_plugins_table);
+
+      if (error !== null) {
+        alert.error(error);
+      }
+
+      alert.status('Updated plugins.');
+
+      run_plugin_startup_ops(error);
+    });
+  }
+
+  /**
+   * Updates plugin from GIT.
+   * 
+   * @param  {[type]} plugin [description]
+   * @return {[type]}        [description]
+   */
+  function update_plugin (plugin) {
+    var fsu = load_mod('internal/fs_utils');
+
+    var alert = load_mod('components/alert');
+    alert.bind(manage_plugins_table);
+
+    // http://stackoverflow.com/a/10727155
+    var random_string = function (length) {
+      return Math.round((Math.pow(36, length + 1) - Math.random() * Math.pow(36, length))).toString(36).slice(1);
+    }
+
+    var old_path = plugin.path;
+    var tmp_path = old_path + '_' + random_string(32);
+
+    // save the current plugin code just in case update fails
+    fsu.move(old_path, tmp_path, function (error) {
+      if (error !== null) {
+        alert.error(error);
+        return;
+      }
+
+      var spawn = require('child_process').spawn;
+      var child = spawn('git', ['clone', plugin.git, old_path]);
+
+      child.on('exit', function (exit_code) {
+        alert.bind(add_plugin_trigger.parent());
+
+        if (exit_code) {
+          alert.error('Could not clone Git repository to ' + old_path + '. Restoring original version.');
+          
+          fs.move(tmp_path, old_path, function (error) {
+            if (error !== null) {
+              alert.error(error);
+              return;
+            }
+          });
+
+          return;
+        }
+
+        fsu.remove(tmp_path, function(error) {
+          if (error !== null) {
+            alert.error(error);
+            return;
+          }
+        });
+
+        alert.status('Updated "' + plugin.name_nice + '" plugin.');
+      });
+    });
+  }
+
+  /**
+   * Prompts user for plugin-removal confirmation.
+   * 
+   * @param  {[type]} plugin [description]
+   * @return {[type]}        [description]
+   */
+  function remove_plugin (plugin) {
+    bootbox.dialog({
+      title: "Remove plugin: " + plugin.name_nice,
+      message: 'This will remove "' + plugin.name_nice + '" plugin from Lunchbox and delete associated plugin files.',
+      buttons: {
+        success: {
+          label: "Cancel",
+          className: "btn-default",
+          callback: function () {
+            // Do nothing.
+          }
+        },
+        delete: {
+          label: "Remove",
+          className: "btn-danger",
+          callback: function () {
+            remove_plugin_action(plugin);
           }
         }
-      });
+      }
+    });
+  }
 
+  /**
+   * Removes plugin.
+   * 
+   * @param  {[type]} plugin [description]
+   * @return {[type]}        [description]
+   */
+  function remove_plugin_action (plugin) {
+    var fsu = load_mod('internal/fs_utils');
+
+    var alert = load_mod('components/alert');
+    alert.bind(manage_plugins_table);
+
+    fsu.remove(plugin.path, function (error) {
+      if (error) {
+        alert.error(error);
+        return;
+      }
+
+      // filter-out plugin from settings
+      settings.plugins = $.grep(settings.plugins, function(obj, idx) {
+        return obj.name === plugin.name; 
+      }, true);
+
+      // update settings
       settings.save(function (error, data) {
-        var alert = load_mod('components/alert');
-        alert.bind(manage_plugins_trigger.parent());
-
         if (error !== null) {
           alert.error(error);
+          return;
         }
 
-        alert.status('Updated plugins.');
+        alert.status('Removed "' + plugin.name_nice + '" plugin.');
 
-        // re-run the plugin and nav startup operations to instantly reflect
-        // the updated plugins
-        var dialog = load_mod('components/dialog').create('Updating configuration...');
-
-        var success = function (result) {
-          dialog.hide();
-        };
-
-        runOps(['plugins', 'nav'], [dialog], success, error);
+        run_plugin_startup_ops(error, update_plugins_list());
       });
-    }); 
+    });
   }
 });

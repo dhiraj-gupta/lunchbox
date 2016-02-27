@@ -1,3 +1,4 @@
+
 <h1 class="page-header">Settings</h1>
 
 <form class="lunchbox" id="lunchbox-settings-add-plugin">
@@ -23,18 +24,19 @@
   </div>
 </form>
 
-<!-- TODO: reformat this into a table; add options to remove plugin, and to update plugin from Git -->
-<form class="lunchbox" id="lunchbox-settings-manage-plugins">
-  <div class="panel panel-default">
-    <div class="panel-heading">
-      <h3 class="panel-title">Manage Plugins</h3>
-    </div>
-
-    <div class="panel-body">
-      <div class="dynamic"></div>
-      <div class="actions">
-        <button type="button" class="btn btn-primary submit">Save</button>
-      </div>
-    </div>
+<div class="panel panel-default" id="lunchbox-settings-manage-plugins">
+  <div class="panel-heading">
+    <h3 class="panel-title">Manage Plugins</h3>
   </div>
-</form>
+  <table class="lunchbox table table-striped">
+    <thead>
+      <tr>
+        <th class="col-md-3">Plugin</th>
+        <th class="col-md-3">Enabled</th>
+        <th class="col-md-6" colspan="2">Actions</th>
+      </tr>
+    </thead>
+    <tbody class="panel-body">
+    </tbody>
+  </table>
+</div>
