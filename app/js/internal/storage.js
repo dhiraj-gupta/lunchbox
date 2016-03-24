@@ -17,7 +17,7 @@ module.exports = function (filepath) {
   // figure out the filetype from the extension
   var filetype = null;
   var matches = null;
-  if (matches = filepath.match(/\.(.+)$/)) {
+  if (matches = filepath.match(/\.([^.]*)$/)) {
     filetype = matches[1];
   }
 
