@@ -2,6 +2,7 @@
 
 // settings class
 var GenericSettings = function (filepath) {
+  // TODO: handle scenario with invalid filepath, else this will break
   this._filepath = filepath;
   this._storage = load_mod('internal/storage')(this._filepath);
 };
