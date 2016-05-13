@@ -15,7 +15,7 @@ LunchboxPlugin.prototype.getUniqueName = function () {
 };
 
 LunchboxPlugin.prototype.getBootOps = function () {
-  return {};
+  return [];
 };
 
 LunchboxPlugin.prototype.getNav = function () {
