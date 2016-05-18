@@ -23,7 +23,13 @@ Steps:
 2. `cd lunchbox`
 3. `git submodule init && git submodule update --recursive`
 4. `npm install`
-6. `npm start`
-
+5. `sudo npm install -g gulp `
+6. `gulp`
 
 ### Note: NFS mounting still requires user input that is not handled through the app yet (password to edit nfs exports). Watch your terminal window for the password prompt.
+
+## Plugins
+
+Available plugins:
+
+* [DrupalVM](https://github.com/LunchboxDevTools/drupalvm)

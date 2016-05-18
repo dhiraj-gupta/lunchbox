@@ -1,1 +1,7 @@
 node_modules
+app/css/styles.css
+
+# temp
+plugins
+settings.yaml
+settings.json
